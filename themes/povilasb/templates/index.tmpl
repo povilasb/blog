@@ -1,0 +1,31 @@
+{#  -*- coding: utf-8 -*- #}
+{% import 'index_helper.tmpl' as helper with context %}
+{% import 'comments_helper.tmpl' as comments with context %}
+{% import 'pagination_helper.tmpl' as pagination with context %}
+{% extends 'base.tmpl' %}
+
+{% block extra_head %}
+  {{ super() }}
+  {% if posts and (permalink == '/' or permalink == '/' + index_file) %}
+    <link rel="prefetch" href="{{ posts[0].permalink() }}" type="text/html">
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% block content_header %}{% endblock %}
+{% if 'main_index' in pagekind %}
+  {{ front_index_header }}
+{% endif %}
+{% if page_links %}
+  {{ pagination.page_navigation(current_page, page_links, prevlink, nextlink, prev_next_links_reversed) }}
+{% endif %}
+<h2>Constant learning is the name of the game...</h2>
+<div class="postindex">
+  {% for post in posts %}
+    <h5>
+      <span>{{ post.formatted_date('%Y-%m-%d')|e }}</span>
+      <a href="{{ post.permalink() }}">{{ post.title()|e }}</a>
+    </h5>
+  {% endfor %}
+</div>
+{% endblock %}
