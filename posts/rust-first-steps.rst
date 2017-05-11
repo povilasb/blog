@@ -36,14 +36,14 @@ In Rust variables are immutable (const in C++) by default:
 
 .. code-block:: rust
 
-    let n: uint8 = 8;
+    let n: u8 = 8;
     n = 9; // results in error
 
 Mutable variables are marked explicitly:
 
 .. code-block:: rust
 
-    let mut n: uint8 = 8;
+    let mut n: u8 = 8;
     n = 9;
 
 Rust uses static typing system but you don't necessarily have to specify
