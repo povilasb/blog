@@ -19,5 +19,5 @@ However, every time I want to forward ssh agent, I can't remember how.
 Actually it's as simple as::
 
     eval `ssh-agent -s`
-    ssh-agent
+    ssh-add
     ssh -A povilas@example.com
