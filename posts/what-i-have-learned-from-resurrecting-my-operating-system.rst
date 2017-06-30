@@ -35,7 +35,7 @@ I can run QEMU with floppy disk image::
 Alternatively I can tell QEMU to emulate usb disk::
 
     $ qemu-system-i386 -usb -usbdevice disk:sos.img
-    $ qemu-system-i386 -usb -usbdevice disk:/dev/sdb
+    $ qemu-system-i386 -usb -usbdevice host:$vendor_id:$product_id
 
 I've learned that if I press `ctrl+alt+shift+2` when OS is running inside QEMU,
 it will open console which allows me to control the emulated machine.
