@@ -22,10 +22,12 @@
 <h2>Constant learning is the name of the game...</h2>
 <div class="postindex">
   {% for post in posts %}
-    <h5>
-      <span>{{ post.formatted_date('%Y-%m-%d')|e }}</span>
-      <a href="{{ post.permalink() }}">{{ post.title()|e }}</a>
-    </h5>
+    {% if 'food' not in post.tags %}
+      <h5>
+        <span>{{ post.formatted_date('%Y-%m-%d')|e }}</span>
+        <a href="{{ post.permalink() }}">{{ post.title()|e }}</a>
+      </h5>
+    {% endif %}
   {% endfor %}
 </div>
 {% endblock %}
