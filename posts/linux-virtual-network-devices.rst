@@ -160,6 +160,20 @@ To send raw IP packets we write them to TUN interface:
 By the way, we can use `pypacker <https://github.com/mike01/pypacker>`_ to
 construct and parse raw packets.
 
+Prerequisites
+=============
+
+* To use TUN/TAP devices python scripts must be run with root permissions.
+* To forward packets from TUN/TAP to other interfaces (`eth0`), packet forwarding
+  must be enabled::
+
+    # echo 1 > /proc/sys/net/ipv4/ip_forward
+    # iptables -P FORWARD ACCEPT
+
+* To properly route outgoing packets NAT must be enabled::
+
+  # iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -j MASQUERADE
+
 .. rubric:: References
 
 .. [#f1] https://www.kernel.org/doc/Documentation/networking/tuntap.txt
