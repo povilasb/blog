@@ -11,7 +11,7 @@ Our computers can have multiple network devices: Ethernet, WiFi cards,
 virtual network devices, etc.
 On Linux when the network packets arrive to one of these devices, these
 packets are handled by device drivers and then put to networking stack.
-Which then forwards packets to appropriate application to handle.
+Then packets are dispatched to appropriate application to handle.
 
 When the packets are sent, they are put to networking stack, e.g. via
 BSD sockets API.
@@ -48,6 +48,8 @@ Now what happens when we execute `ping 8.8.8.8`?
 Well, Linux kernel
 
 1. matches address `8.8.8.8` with `0.0.0.0` (all addresses),
+2. selects route with the lowest `Metric` (600) because there are multiple
+   routes to `0.0.0.0`,
 2. looks up the gateway which is `192.168.1.1`,
 3. matches gateway address with `192.168.1.0`,
 4. looks up that destination `192.168.1.0` does not have gateway meaning
@@ -76,7 +78,10 @@ But `192.168.1.0` prefix is 24 bits long, so this rule takes priority.
 `Flags` column holds some metainfo about routes: `U` - route is up, `G` route
 has gateway.
 
-`Ref` and `Metric` columns are not used in Linux kernel.
+`Metric` column is used to determine priority when multiple routes match
+packet destination address.
+
+`Ref` column is not used in Linux kernel.
 
 Manipulating routing table
 ==========================
@@ -107,6 +112,13 @@ We can test which `Destination` entry will be matched for given address::
 The difference between the last two routes is that NAT will be executed
 for packets destined to `8.8.8.8`, while packets with destination
 `192.168.1.100` will remain intact.
+
+We can change the route metric by adding new route with different metric
+and then deleting the old one::
+
+    # ip route add default via 192.168.1.1 dev wlp3s0 proto static metric 500
+    # ip route del default via 192.168.1.1 dev wlp3s0 proto static metric 600
+
 
 .. rubric:: References
 
