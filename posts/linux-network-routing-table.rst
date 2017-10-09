@@ -50,13 +50,13 @@ Well, Linux kernel
 1. matches address `8.8.8.8` with `0.0.0.0` (all addresses),
 2. selects route with the lowest `Metric` (600) because there are multiple
    routes to `0.0.0.0`,
-2. looks up the gateway which is `192.168.1.1`,
-3. matches gateway address with `192.168.1.0`,
-4. looks up that destination `192.168.1.0` does not have gateway meaning
+3. looks up the gateway which is `192.168.1.1`,
+4. matches gateway address with `192.168.1.0`,
+5. looks up that destination `192.168.1.0` does not have gateway meaning
    that the network is directly connected somehow,
-5. does NAT (network address translation),
-6. writes packet to `wlp3s0` interface,
-7. device driver sends packet to WiFi card.
+6. does NAT (network address translation),
+7. writes packet to `wlp3s0` interface,
+8. device driver sends packet to WiFi card.
 
 Understanding routing table
 ===========================
