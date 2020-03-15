@@ -21,6 +21,7 @@ incoming packet.
 
 ## Example
 
+```text
                    +---------------+
                    | Target Server |
                    |    1.1.1.1    |
@@ -61,6 +62,7 @@ incoming packet.
                     |  PC on LAN  |
                     | 192.168.1.5 |
                     +-------------+
+```
 
 ## NAT Table
 
@@ -68,7 +70,7 @@ The fundamental way NAT works is pretty straightforward:
 
  1. Router keeps a table of port mappings - NAT table. As new packets travel
    through the router this table is updated, e.g.
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -83,7 +85,7 @@ The fundamental way NAT works is pretty straightforward:
  3. When incoming packet is received, router finds a row in the NAT table whose
    `NEW_PORT` matches packet destination port. Then it forwards the packet
    to machine on LAN using `SRC_IP`:`SRC_PORT` information from NAT table.
-```
+```text
                    +---------------+
                    | Target Server |
                    |    1.1.1.1    |
@@ -138,7 +140,7 @@ unique `NEW_PORT` for each unique `(Protocol, SRC_IP, SRC_PORT)` tuple. Let's
 see an example.
 
 Say we have an empty NAT table:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -146,7 +148,7 @@ Say we have an empty NAT table:
 
 Then we send UDP packet to `1.1.1.1:80` . Network Address Translation kicks off
 and does it's job:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -158,7 +160,7 @@ We send another UDP packet with the same source IP and port (this is possible
 if we use the same UDP socket), but this time to `8.8.8.8:80`. This time NAT
 table already has an entry for source endpoint `192.168.1.5:5000`, so another
 one won't be added:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -168,7 +170,7 @@ one won't be added:
 
 We send yet another UDP packet, but this time we use different source IP
 and/or port. EIM NAT will add a new port mapping in this case:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -184,7 +186,7 @@ each unique tuple `(Protocol, SRC_IP, SRC_PORT, DST_IP, DST_PORT)`. Let's
 see an example.
 
 Let's start with a NAT table containing a single entry
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -195,7 +197,7 @@ Let's start with a NAT table containing a single entry
 We send another UDP packet with the same source IP and port to different target
 server `8.8.8.8:80`. Since NAT table does not have an entry to this endpoing,
 new port mapping will be added:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -206,7 +208,7 @@ new port mapping will be added:
 
 Say we send another packet, this time to the same IP address, but different
 port. Even in this case new port mapping will be added:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -230,7 +232,7 @@ This is the least restrictive type of NAT. Full cone NAT allows any incoming
 packet whose destination port matches some `NEW_PORT` in NAT table.
 
 E.g. say we have such NAT table:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
@@ -240,7 +242,7 @@ E.g. say we have such NAT table:
 ```
 
 Then the packet arrives to our router:
-```
+```text
       +-----------------------------------------------+
       |                  UDP Packet                   |
       +-------------+----------+-----------+----------+
@@ -267,7 +269,7 @@ The destination port of a packet (`7000`) is matched with `NEW_PORT` in
 router's NAT table. Since we find an entry, the packet is forwarded.
 Let's take another example. Say we have the same NAT table, but the incoming
 packet is:
-```
+```text
       +-----------------------------------------------+
       |                  UDP Packet                   |
       +-------------+----------+-----------+----------+
@@ -294,7 +296,7 @@ This packet will be discarded since its destination port `6000` does not
 exist in NAT under `NEW_PORT` column.
 
 Finally, I'd like to give another example:
-```
+```text
       +-----------------------------------------------+
       |                  UDP Packet                   |
       +-------------+----------+-----------+----------+
@@ -331,7 +333,7 @@ endpoints that we sent the packet to before. That means
    same row in NAT table.
 
 So say we have a NAT table:
-```
+```text
     +----------+-------------+----------+-------------+----------+----------+
     | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
     +----------+-------------+----------+-------------+----------+----------+
