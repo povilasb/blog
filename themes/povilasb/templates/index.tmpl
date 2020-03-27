@@ -24,7 +24,7 @@
   {% for post in posts %}
     {% if 'food' not in post.tags %}
       <h5>
-        <span>{{ post.formatted_date('%Y-%m-%d')|e }}</span>
+        <span>{{ post.formatted_date('yyyy-MM-dd')|e }}</span>
         <a href="{{ post.permalink() }}">{{ post.title()|e }}</a>
       </h5>
     {% endif %}
