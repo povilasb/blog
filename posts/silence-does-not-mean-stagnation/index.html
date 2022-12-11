@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="description" content="Summary of my progress over the last year.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silence does not mean stagnation | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/silence-does-not-mean-stagnation/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../data-tunelling-over-dns/" title="Data tunelling over DNS" type="text/html">
+<link rel="next" href="../network-address-translation/" title="Network Address Translation" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Silence does not mean stagnation">
+<meta property="og:url" content="http://blog.povilasb.com/posts/silence-does-not-mean-stagnation/">
+<meta property="og:description" content="Summary of my progress over the last year.">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2018-11-05T21:48:02+02:00">
+<meta property="article:tag" content="development">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Silence does not mean stagnation</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2018-11-05T21:48:02+02:00" itemprop="datePublished" title="2018-11-05 21:48">2018-11-05 21:48</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>It's been over a year since I last wrote something on this blog. At the end of
+2016, when I returned from <a class="reference external" href="https://recurse.com">the Recurse Center</a>, I told
+myself I will be blogging about all new things I learn or experiment with -
+cause that's a good way to organize ones thoughts. Anyway, good habits
+require at least 2 things: will and time. I wouldn't say I don't have any of
+those but in the end I did not write anything for a whole year!</p>
+<p>One of the major factors that kept me silent was my new job. At the end of
+October in 2017 I started working with <a class="reference external" href="https://maidsafe.net">MaidSafe</a> on a
+peer-to-peer privacy and security oriented <a class="reference external" href="https://safenetwork.tech">data network</a>. The peer-to-peer technology was totally new to
+me as a programmer. Also, most of our code is written in Rust which I didn't
+have professional experience with. On top of that, I started working remotely
+and that was another thing I've never done before. So, I've kept myself quite
+busy and couldn't find enough time to properly log some of my discoveries :)</p>
+<section id="work-at-maidsafe"><h2>Work at MaidSafe</h2>
+<p>One of the nice things about working at MaidSafe is that everything is open
+source. You can even go and checkout out what I've been doing <a class="reference external" href="https://github.com/povilasb">today</a> :) At MaidSafe I'm mainly working on the p2p
+networking library called Crust which puts into use a number of other libraries.
+I will mention only those that I've made a fair amount of contributions.</p>
+<section id="p2p"><h3>p2p</h3>
+<p><a class="reference external" href="https://github.com/ustulation/p2p/">p2p</a> is a Rust library that does TCP and
+UDP hole punching. Hole punching is a technique that makes direct connections
+possible between two peers that are behind routers with Network Address
+Translation. This topic deserves a blog post of it's own that I will probably
+write some time soon. p2p is a very important library for peer-to-peer
+connections and is integrated into Crust. I made sure the integration was
+smooth and was one of the library maintainers.</p>
+</section><section id="tokio-utp"><h3>tokio-utp</h3>
+<p><a class="reference external" href="https://github.com/maidsafe/tokio_utp">tokio-utp</a> is another Rust networking
+library. It implements uTP protocol in pure Rust and exposes Tokio/futures
+based API. uTP protocol adds reliability logic on top of UDP protocol. It also
+describes the expected congestion control mechanism that yields to other
+network traffic in the system. I took over the maintenance of this library from
+ex developers. I did a lot of investigation on how congestion control was
+implemented, I worked on graceful connection shutdown, improved test coverage
+and code quality in general.</p>
+</section><section id="rust-libutp"><h3>rust-libutp</h3>
+<p><a class="reference external" href="https://github.com/maidsafe/tokio_utp">tokio-utp</a> was written from scratch
+and at that time it wasn't as stable as people would like it to be. As a
+result, I wrote the wrappers for the libutp which is C implementation of uTP
+protocol. <a class="reference external" href="https://github.com/bittorrent/libutp">libutp</a> is the mainstream
+implementation and is supposed to be robust and stable. That was the first time
+I wrote C bindings for Rust, hence learned something new. I have to say it was
+quite easy: Rust has this tool <a class="reference external" href="https://github.com/rust-lang-nursery/rust-bindgen">bindgen</a> that automatically
+generates Rust wrappers for a given C header file. The generated wrappers are
+unsafe so I did have to provide safe API on top of. Anyway, work is still in
+progress there.</p>
+</section><section id="crust"><h3>Crust</h3>
+<p>Most of my time I spent working on <a class="reference external" href="https://github.com/maidsafe/crust">Crust</a>
+library. It's a peer-to-peer communications library written in Rust. It
+supports multiple transport protocols (TCP and uTP at this moment), encryption,
+hole punching, etc. I did some work to integrate tokio and futures crates into
+Crust, greatly expanded automated test suite, implemented examples, expanded
+documentation and maintained library overall quality.</p>
+<p>I also did some minor changes to MaidSafe encryption libray
+<a class="reference external" href="https://github.com/maidsafe/safe_crypto/commits?author=povilasb">safe_crypto</a>
+and carried safe_crypto integration into Crust.</p>
+</section><section id="netsim"><h3>netsim</h3>
+<p>Testing peer-to-peer networking code is hard, especially the hole punching
+implementation. As a result my collegue <a class="reference external" href="https://github.com/canndrew">Andrew</a>
+created a library that simulates computer networks with Rust - <a class="reference external" href="https://github.com/canndrew/netsim">netsim</a>. It runs completely in memory and gives
+you a full control over the simulated network: you can construct hierarchical
+networks, exchange IP packets, introduce packet loss and latency, simulate misc
+network address translation behaviors, etc.
+I mostly tested the library from the user perspective and gave my feedback.
+In addition, I did some minor
+<a class="reference external" href="https://github.com/canndrew/netsim/commits?author=povilasb">contributions</a>
+and since this is such an amazing tool I did a couple of presentations at our
+local events in Lithuania: <a class="reference external" href="https://2018.notrollsallowed.com/pranesimai/60">no trolls allowed 2018</a> and <a class="reference external" href="https://www.meetup.com/Rust-in-Vilnius/events/254403141/">Vilnius Rust meetup</a> :)</p>
+</section></section><section id="open-source-projects"><h2>Open Source Projects</h2>
+<p>Besides my daily job I usually tend to spend some time on my personal or
+other open source projects. A lot of times the work I do for the companies
+influences my interests after work too.</p>
+<p>A year ago I did some UDP and TCP hole punching experiments using python.
+The code is <a class="reference external" href="https://github.com/povilasb/hole-punching">here</a>.
+I also wrote a command line utility to forward ports in your router:
+<a class="reference external" href="https://github.com/povilasb/pyigd">https://github.com/povilasb/pyigd</a> which I actively use to this day.</p>
+<p>At MaidSafe I work with Rust on a daily basis where we use a lot of open source
+libraries. During the last year I did some small contributions to some of them.
+I added boolean matchers to rust hamcrest library:
+<a class="reference external" href="https://github.com/ujh/hamcrest-rust/commits?author=povilasb">https://github.com/ujh/hamcrest-rust/commits?author=povilasb</a> . Unfortunately,
+the development of hamcrest-rust got frozen. But then an active <a class="reference external" href="https://github.com/Valloric/hamcrest2-rust">fork</a> emerged which accepted a small
+<a class="reference external" href="https://github.com/Valloric/hamcrest2-rust/pull/4">PR of mine</a>. I made
+<cite>contains()</cite> matcher generic which allowed it to accept single element or
+vector.  Hence <cite>assert_that!(vec![1, 2, 3], contains(2))</cite> became possible.
+Another rust library I contributed to is <a class="reference external" href="https://github.com/sbstp/rust-igd">rust-igd</a> which implements <a class="reference external" href="https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol">IGD protocol</a>. I added
+<a class="reference external" href="https://github.com/sbstp/rust-igd/pull/33">an asyncronous use example</a>.
+Finally, I made a tiny <a class="reference external" href="https://github.com/cespare/vim-toml/pull/41">PR</a>
+into <a class="reference external" href="https://github.com/cespare/vim-toml">vim-toml</a> which is <a class="reference external" href="https://github.com/toml-lang/toml">TOML format</a> highlighting for vim. Unfortunately the
+PR did not get merged yet.</p>
+</section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/development/" rel="tag">development</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../data-tunelling-over-dns/" rel="prev" title="Data tunelling over DNS">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../network-address-translation/" rel="next" title="Network Address Translation">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

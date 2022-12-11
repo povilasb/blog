@@ -1,0 +1,1216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about posts)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/cat_posts.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Network Address Translation</title><link>http://blog.povilasb.com/posts/network-address-translation/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;There is a lot of resources on the Internet explaining how NAT works, but I
+just want to have a post here that will lay the foundations for the subsequent
+post I was meaning to write - &lt;a href="https://en.wikipedia.org/wiki/Hole_punching_%28networking%29"&gt;hole
+punching&lt;/a&gt;.
+Network Address Translation (later simply NAT) is a method to connect multiple
+LAN devices to the Internet via a single IP address. NAT is implemented by
+our home routers. Technically speaking NAT changes source IP and source port
+fields of every outgoing UDP/TCP packet and destination IP and port of every
+incoming packet.&lt;/p&gt;
+&lt;h3&gt;Example&lt;/h3&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;                   +---------------+
+                   | Target Server |
+                   |    1.1.1.1    |
+                   +---------------+
+                          ^
+                          |                            Packet source IP and
+                          |                          / port number are
+      +---------------------------------------------+  overwritten by our router
+      |                TCP/UDP Packet               |
+      +-------------+----------+---------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP  | DST_PORT |
+      +-------------+----------+---------+----------+
+      | 78.53.1.5   |   7000   | 1.1.1.1 |   80     |
+      +-------------+----------+---------+----------+
+                          |
+                          |
+                  +---------------+
+                  |   78.53.1.5   | - Router IP assigned by our ISP
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 | - Router IP on Local Area Network
+                  +---------------+
+                          ^
+                          |                            Our machine on LAN
+                          |                          / sends this packet to
+      +---------------------------------------------+  the 1.1.1.1 server
+      |                TCP/UDP Packet               |
+      +-------------+----------+---------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP  | DST_PORT |
+      +-------------+----------+---------+----------+
+      | 192.168.1.5 |   5000   | 1.1.1.1 |   80     |
+      +-------------+----------+---------+----------+
+                          ^
+                          |
+                          |
+                    +-------------+
+                    |  PC on LAN  |
+                    | 192.168.1.5 |
+                    +-------------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;NAT Table&lt;/h3&gt;
+&lt;p&gt;The fundamental way NAT works is pretty straightforward:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Router keeps a table of port mappings - NAT table. As new packets travel
+   through the router this table is updated, e.g.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Before packet is sent over the Internet, it's source port will be replaced
+   with &lt;code&gt;NEW_PORT&lt;/code&gt;. So this is the port, the target server will see when the
+   packet arrives.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;When incoming packet is received, router finds a row in the NAT table whose
+   &lt;code&gt;NEW_PORT&lt;/code&gt; matches packet destination port. Then it forwards the packet
+   to machine on LAN using &lt;code&gt;SRC_IP&lt;/code&gt;:&lt;code&gt;SRC_PORT&lt;/code&gt; information from NAT table.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;                   +---------------+
+                   | Target Server |
+                   |    1.1.1.1    |
+                   +---------------+
+                          |
+                          |
+                          V
+      +-----------------------------------------------+
+      |                  TCP/UDP Packet               |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      |   1.1.1.1   |    80    | 78.53.1.5 |   7000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                  +---------------+
+                  |   78.53.1.5   | - Router IP assigned by our ISP
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 | - Router IP on Local Area Network
+                  +---------------+
+                          |
+                          |
+                          V
+      +-------------------------------------------------+
+      |                  TCP/UDP Packet                 |
+      +-------------+----------+-------------+----------+
+      |    SRC_IP   | SRC_PORT |   DST_IP    | DST_PORT |
+      +-------------+----------+-------------+----------+
+      |   1.1.1.1   |    80    | 192.168.1.5 |   5000   |
+      +-------------+----------+-------------+----------+
+                          |
+                          |
+                          V
+                    +-------------+
+                    |  PC on LAN  |
+                    | 192.168.1.5 |
+                    +-------------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;NAT types&lt;/h3&gt;
+&lt;p&gt;Depending on how &lt;code&gt;NEW_PORT&lt;/code&gt; is assigned NATs fall under 2 categories:
+EIM (Endpoint Independent Mapping) and EDM (Endpoint Dependent Mapping).&lt;/p&gt;
+&lt;h4&gt;Endpoint independent mapping NAT&lt;/h4&gt;
+&lt;p&gt;EIM NAT&lt;sup id="fnref:1"&gt;&lt;a class="footnote-ref" href="http://blog.povilasb.com/posts/network-address-translation/#fn:1"&gt;1&lt;/a&gt;&lt;/sup&gt; (those abbreviations can get pretty arcane, hugh? :D) assigns
+unique &lt;code&gt;NEW_PORT&lt;/code&gt; for each unique &lt;code&gt;(Protocol, SRC_IP, SRC_PORT)&lt;/code&gt; tuple. Let's
+see an example.&lt;/p&gt;
+&lt;p&gt;Say we have an empty NAT table:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then we send UDP packet to &lt;code&gt;1.1.1.1:80&lt;/code&gt; . Network Address Translation kicks off
+and does it's job:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We send another UDP packet with the same source IP and port (this is possible
+if we use the same UDP socket), but this time to &lt;code&gt;8.8.8.8:80&lt;/code&gt;. This time NAT
+table already has an entry for source endpoint &lt;code&gt;192.168.1.5:5000&lt;/code&gt;, so another
+one won't be added:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We send yet another UDP packet, but this time we use different source IP
+and/or port. EIM NAT will add a new port mapping in this case:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.5 |   6000   |   1.1.1.1   |   80     |  8000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4&gt;Endpoint dependent mapping NAT&lt;/h4&gt;
+&lt;p&gt;It is also known as symmetric NAT&lt;sup id="fnref:2"&gt;&lt;a class="footnote-ref" href="http://blog.povilasb.com/posts/network-address-translation/#fn:2"&gt;2&lt;/a&gt;&lt;/sup&gt;. EDM NAT assigns unique &lt;code&gt;NEW_PORT&lt;/code&gt; for
+each unique tuple &lt;code&gt;(Protocol, SRC_IP, SRC_PORT, DST_IP, DST_PORT)&lt;/code&gt;. Let's
+see an example.&lt;/p&gt;
+&lt;p&gt;Let's start with a NAT table containing a single entry&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We send another UDP packet with the same source IP and port to different target
+server &lt;code&gt;8.8.8.8:80&lt;/code&gt;. Since NAT table does not have an entry to this endpoing,
+new port mapping will be added:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.5 |   5000   |   8.8.8.8   |   80     |  8000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Say we send another packet, this time to the same IP address, but different
+port. Even in this case new port mapping will be added:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.5 |   5000   |   8.8.8.8   |   80     |  8000    |
+    |    UDP   | 192.168.1.5 |   5000   |   8.8.8.8   |   443    |  9000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;NAT filtering types&lt;/h3&gt;
+&lt;p&gt;NATs can be grouped into different types based on how they filter incoming
+packets&lt;sup id="fnref:3"&gt;&lt;a class="footnote-ref" href="http://blog.povilasb.com/posts/network-address-translation/#fn:3"&gt;3&lt;/a&gt;&lt;/sup&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;full cone NAT&lt;/li&gt;
+&lt;li&gt;port restricted cone NAT&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4&gt;Full cone NAT&lt;/h4&gt;
+&lt;p&gt;This is the least restrictive type of NAT. Full cone NAT allows any incoming
+packet whose destination port matches some &lt;code&gt;NEW_PORT&lt;/code&gt; in NAT table.&lt;/p&gt;
+&lt;p&gt;E.g. say we have such NAT table:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.8 |   5000   |   8.8.8.8   |   80     |  8000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then the packet arrives to our router:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;      +-----------------------------------------------+
+      |                  UDP Packet                   |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      |   1.1.1.1   |    80    | 78.53.1.5 |   7000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                          V
+                  +---------------+
+                  |   78.53.1.5   |
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 |
+                  +---------------+
+                         |
+                         | ----- Packet is forwarded to 192.168.1.5
+                         V
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The destination port of a packet (&lt;code&gt;7000&lt;/code&gt;) is matched with &lt;code&gt;NEW_PORT&lt;/code&gt; in
+router's NAT table. Since we find an entry, the packet is forwarded.
+Let's take another example. Say we have the same NAT table, but the incoming
+packet is:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;      +-----------------------------------------------+
+      |                  UDP Packet                   |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      |   1.1.1.1   |    80    | 78.53.1.5 |   6000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                          V
+                  +---------------+
+                  |   78.53.1.5   |
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 |
+                  +---------------+
+                         |
+                         X ----- Packet is dropped
+                         V
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This packet will be discarded since its destination port &lt;code&gt;6000&lt;/code&gt; does not
+exist in NAT under &lt;code&gt;NEW_PORT&lt;/code&gt; column.&lt;/p&gt;
+&lt;p&gt;Finally, I'd like to give another example:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;      +-----------------------------------------------+
+      |                  UDP Packet                   |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      | 86.100.4.5  |  87634   | 78.53.1.5 |   8000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                          V
+                  +---------------+
+                  |   78.53.1.5   |
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 |
+                  +---------------+
+                         |
+                         | ----- Packet is forwarded to 192.168.1.5
+                         V
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Notice how this packet is forwarded even though it's originating from a
+random source machine. This is full cone NAT in a nutshell - it allows packets
+go through as long as their destination port is inside NAT table.&lt;/p&gt;
+&lt;h4&gt;Port restricted cone NAT&lt;/h4&gt;
+&lt;p&gt;This is the most restrictive NAT. It allows incoming packets only from
+endpoints that we sent the packet to before. That means&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;destination port of a packet must match &lt;code&gt;NEW_PORT&lt;/code&gt; in NAT table;&lt;/li&gt;
+&lt;li&gt;source IP and port of a packet must match destination IP and port of the
+   same row in NAT table.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;So say we have a NAT table:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then UDP packet with &lt;code&gt;(SRC_IP=1.1.1.1, SRC_PORT=80, DST_IP=78.53.1.5, DST_PORT=7000)&lt;/code&gt;
+will be allowed, but these packets will be dropped:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;(SRC_IP=1.1.1.1, SRC_PORT=80, DST_IP=78.53.1.5, DST_PORT=6000)&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;(SRC_IP=1.1.1.1, SRC_PORT=443, DST_IP=78.53.1.5, DST_PORT=7000)&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;(SRC_IP=8.8.8.8, SRC_PORT=80, DST_IP=78.53.1.5, DST_PORT=7000)&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Glossary&lt;/h3&gt;
+&lt;p&gt;endpoint - IP:port pair.&lt;/p&gt;
+&lt;div class="footnote"&gt;
+&lt;hr&gt;
+&lt;ol&gt;
+&lt;li id="fn:1"&gt;
+&lt;p&gt;https://docs.rs/p2p/0.6.0/p2p/#endpoint-independent-mapping-eim &lt;a class="footnote-backref" href="http://blog.povilasb.com/posts/network-address-translation/#fnref:1" title="Jump back to footnote 1 in the text"&gt;↩&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li id="fn:2"&gt;
+&lt;p&gt;https://www.think-like-a-computer.com/2011/09/19/symmetric-nat/ &lt;a class="footnote-backref" href="http://blog.povilasb.com/posts/network-address-translation/#fnref:2" title="Jump back to footnote 2 in the text"&gt;↩&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li id="fn:3"&gt;
+&lt;p&gt;https://www.think-like-a-computer.com/2011/09/16/types-of-nat &lt;a class="footnote-backref" href="http://blog.povilasb.com/posts/network-address-translation/#fnref:3" title="Jump back to footnote 3 in the text"&gt;↩&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;</description><category>nat</category><category>networking</category><guid>http://blog.povilasb.com/posts/network-address-translation/</guid><pubDate>Sun, 20 Jan 2019 17:39:39 GMT</pubDate></item><item><title>Silence does not mean stagnation</title><link>http://blog.povilasb.com/posts/silence-does-not-mean-stagnation/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;It's been over a year since I last wrote something on this blog. At the end of
+2016, when I returned from &lt;a class="reference external" href="https://recurse.com"&gt;the Recurse Center&lt;/a&gt;, I told
+myself I will be blogging about all new things I learn or experiment with -
+cause that's a good way to organize ones thoughts. Anyway, good habits
+require at least 2 things: will and time. I wouldn't say I don't have any of
+those but in the end I did not write anything for a whole year!&lt;/p&gt;
+&lt;p&gt;One of the major factors that kept me silent was my new job. At the end of
+October in 2017 I started working with &lt;a class="reference external" href="https://maidsafe.net"&gt;MaidSafe&lt;/a&gt; on a
+peer-to-peer privacy and security oriented &lt;a class="reference external" href="https://safenetwork.tech"&gt;data network&lt;/a&gt;. The peer-to-peer technology was totally new to
+me as a programmer. Also, most of our code is written in Rust which I didn't
+have professional experience with. On top of that, I started working remotely
+and that was another thing I've never done before. So, I've kept myself quite
+busy and couldn't find enough time to properly log some of my discoveries :)&lt;/p&gt;
+&lt;section id="work-at-maidsafe"&gt;
+&lt;h2&gt;Work at MaidSafe&lt;/h2&gt;
+&lt;p&gt;One of the nice things about working at MaidSafe is that everything is open
+source. You can even go and checkout out what I've been doing &lt;a class="reference external" href="https://github.com/povilasb"&gt;today&lt;/a&gt; :) At MaidSafe I'm mainly working on the p2p
+networking library called Crust which puts into use a number of other libraries.
+I will mention only those that I've made a fair amount of contributions.&lt;/p&gt;
+&lt;section id="p2p"&gt;
+&lt;h3&gt;p2p&lt;/h3&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/ustulation/p2p/"&gt;p2p&lt;/a&gt; is a Rust library that does TCP and
+UDP hole punching. Hole punching is a technique that makes direct connections
+possible between two peers that are behind routers with Network Address
+Translation. This topic deserves a blog post of it's own that I will probably
+write some time soon. p2p is a very important library for peer-to-peer
+connections and is integrated into Crust. I made sure the integration was
+smooth and was one of the library maintainers.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="tokio-utp"&gt;
+&lt;h3&gt;tokio-utp&lt;/h3&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/maidsafe/tokio_utp"&gt;tokio-utp&lt;/a&gt; is another Rust networking
+library. It implements uTP protocol in pure Rust and exposes Tokio/futures
+based API. uTP protocol adds reliability logic on top of UDP protocol. It also
+describes the expected congestion control mechanism that yields to other
+network traffic in the system. I took over the maintenance of this library from
+ex developers. I did a lot of investigation on how congestion control was
+implemented, I worked on graceful connection shutdown, improved test coverage
+and code quality in general.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="rust-libutp"&gt;
+&lt;h3&gt;rust-libutp&lt;/h3&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/maidsafe/tokio_utp"&gt;tokio-utp&lt;/a&gt; was written from scratch
+and at that time it wasn't as stable as people would like it to be. As a
+result, I wrote the wrappers for the libutp which is C implementation of uTP
+protocol. &lt;a class="reference external" href="https://github.com/bittorrent/libutp"&gt;libutp&lt;/a&gt; is the mainstream
+implementation and is supposed to be robust and stable. That was the first time
+I wrote C bindings for Rust, hence learned something new. I have to say it was
+quite easy: Rust has this tool &lt;a class="reference external" href="https://github.com/rust-lang-nursery/rust-bindgen"&gt;bindgen&lt;/a&gt; that automatically
+generates Rust wrappers for a given C header file. The generated wrappers are
+unsafe so I did have to provide safe API on top of. Anyway, work is still in
+progress there.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="crust"&gt;
+&lt;h3&gt;Crust&lt;/h3&gt;
+&lt;p&gt;Most of my time I spent working on &lt;a class="reference external" href="https://github.com/maidsafe/crust"&gt;Crust&lt;/a&gt;
+library. It's a peer-to-peer communications library written in Rust. It
+supports multiple transport protocols (TCP and uTP at this moment), encryption,
+hole punching, etc. I did some work to integrate tokio and futures crates into
+Crust, greatly expanded automated test suite, implemented examples, expanded
+documentation and maintained library overall quality.&lt;/p&gt;
+&lt;p&gt;I also did some minor changes to MaidSafe encryption libray
+&lt;a class="reference external" href="https://github.com/maidsafe/safe_crypto/commits?author=povilasb"&gt;safe_crypto&lt;/a&gt;
+and carried safe_crypto integration into Crust.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="netsim"&gt;
+&lt;h3&gt;netsim&lt;/h3&gt;
+&lt;p&gt;Testing peer-to-peer networking code is hard, especially the hole punching
+implementation. As a result my collegue &lt;a class="reference external" href="https://github.com/canndrew"&gt;Andrew&lt;/a&gt;
+created a library that simulates computer networks with Rust - &lt;a class="reference external" href="https://github.com/canndrew/netsim"&gt;netsim&lt;/a&gt;. It runs completely in memory and gives
+you a full control over the simulated network: you can construct hierarchical
+networks, exchange IP packets, introduce packet loss and latency, simulate misc
+network address translation behaviors, etc.
+I mostly tested the library from the user perspective and gave my feedback.
+In addition, I did some minor
+&lt;a class="reference external" href="https://github.com/canndrew/netsim/commits?author=povilasb"&gt;contributions&lt;/a&gt;
+and since this is such an amazing tool I did a couple of presentations at our
+local events in Lithuania: &lt;a class="reference external" href="https://2018.notrollsallowed.com/pranesimai/60"&gt;no trolls allowed 2018&lt;/a&gt; and &lt;a class="reference external" href="https://www.meetup.com/Rust-in-Vilnius/events/254403141/"&gt;Vilnius Rust meetup&lt;/a&gt; :)&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="open-source-projects"&gt;
+&lt;h2&gt;Open Source Projects&lt;/h2&gt;
+&lt;p&gt;Besides my daily job I usually tend to spend some time on my personal or
+other open source projects. A lot of times the work I do for the companies
+influences my interests after work too.&lt;/p&gt;
+&lt;p&gt;A year ago I did some UDP and TCP hole punching experiments using python.
+The code is &lt;a class="reference external" href="https://github.com/povilasb/hole-punching"&gt;here&lt;/a&gt;.
+I also wrote a command line utility to forward ports in your router:
+&lt;a class="reference external" href="https://github.com/povilasb/pyigd"&gt;https://github.com/povilasb/pyigd&lt;/a&gt; which I actively use to this day.&lt;/p&gt;
+&lt;p&gt;At MaidSafe I work with Rust on a daily basis where we use a lot of open source
+libraries. During the last year I did some small contributions to some of them.
+I added boolean matchers to rust hamcrest library:
+&lt;a class="reference external" href="https://github.com/ujh/hamcrest-rust/commits?author=povilasb"&gt;https://github.com/ujh/hamcrest-rust/commits?author=povilasb&lt;/a&gt; . Unfortunately,
+the development of hamcrest-rust got frozen. But then an active &lt;a class="reference external" href="https://github.com/Valloric/hamcrest2-rust"&gt;fork&lt;/a&gt; emerged which accepted a small
+&lt;a class="reference external" href="https://github.com/Valloric/hamcrest2-rust/pull/4"&gt;PR of mine&lt;/a&gt;. I made
+&lt;cite&gt;contains()&lt;/cite&gt; matcher generic which allowed it to accept single element or
+vector.  Hence &lt;cite&gt;assert_that!(vec![1, 2, 3], contains(2))&lt;/cite&gt; became possible.
+Another rust library I contributed to is &lt;a class="reference external" href="https://github.com/sbstp/rust-igd"&gt;rust-igd&lt;/a&gt; which implements &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol"&gt;IGD protocol&lt;/a&gt;. I added
+&lt;a class="reference external" href="https://github.com/sbstp/rust-igd/pull/33"&gt;an asyncronous use example&lt;/a&gt;.
+Finally, I made a tiny &lt;a class="reference external" href="https://github.com/cespare/vim-toml/pull/41"&gt;PR&lt;/a&gt;
+into &lt;a class="reference external" href="https://github.com/cespare/vim-toml"&gt;vim-toml&lt;/a&gt; which is &lt;a class="reference external" href="https://github.com/toml-lang/toml"&gt;TOML format&lt;/a&gt; highlighting for vim. Unfortunately the
+PR did not get merged yet.&lt;/p&gt;
+&lt;/section&gt;</description><category>development</category><guid>http://blog.povilasb.com/posts/silence-does-not-mean-stagnation/</guid><pubDate>Mon, 05 Nov 2018 19:48:02 GMT</pubDate></item><item><title>Data tunelling over DNS</title><link>http://blog.povilasb.com/posts/data-tunelling-over-dns/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Some public Wi-Fi spots have internet access restricted until you authenticate
+yourself. This quite often happens in airports and hotels.
+One interesting thing about such network setups is that DNS is working.
+This fact can be exploited to tunnel arbitrary data through DNS
+requests/responses.&lt;/p&gt;
+&lt;p&gt;In a nutshell the process looks like this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;                   +-----------+
+                   | DNS query |
++--------+    1    |           |
+| Client | ------&amp;gt; | +------+  |
++--------+         | | Data |  |
+    ^              | +------+  |
+    |              +-----------+
+    |                   |
+    | 6                 | 2
+    |                   v
+    |             +--------------+
+    +------------ | DNS Resolver | --------------+
+                  |    @ISP      |        3      |
+                  +--------------+               |
+                         ^                       |
+                       5 |                       |
+                         |                       V
+                  +--------------+        +------------+
+                  | DNS response |        | DNS server |
+                  |              |        +------------+
+                  |   +------+   |               |
+                  |   | Data |   | &amp;lt;-------------+
+                  |   +------+   |         4
+                  +--------------+&lt;/pre&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;Client encodes his data into DNS query.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;DNS query is sent to DNS resolver which usually is at &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Internet_service_provider"&gt;ISP&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;DNS resolver sends request to DNS server &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;. This DNS server is our software
+which is capable of decoding data from DNS query.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Our DNS server encodes some arbitrary data to DNS response.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Response is sent back to DNS resolver.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Resolver relays the response to client which then can decode the data
+inside DNS response.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;section id="setup"&gt;
+&lt;h2&gt;Setup&lt;/h2&gt;
+&lt;p&gt;The existing DNS ecosystem will tunnel our data. But we need to control
+DNS server which decodes our requests and sends responses back.
+Thus we need 4 things:&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;control over a real domain,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;NS record pointing to our server,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;a server with UDP port 53 open,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;software handling DNS requests.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;I own &lt;cite&gt;povilasb.com&lt;/cite&gt; domain thus I can delegate a subdomain for my DNS server:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;ns.povilasb.com        A       86.100.203.141
+
+$ host ns.povilasb.com
+ns.povilasb.com has address 86.100.203.141&lt;/pre&gt;
+&lt;p&gt;Then to route all queries for &lt;cite&gt;tun.povilasb.com&lt;/cite&gt; subdomains to &lt;cite&gt;ns.povilasb.com&lt;/cite&gt;
+server NS record is required:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;tun.povilasb.com       NS      ns.povilasb.com&lt;/pre&gt;
+&lt;p&gt;Finally, a simple Python script is sufficient to receive DNS requests:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-1" name="rest_code_8692e16a0af7420eb581b8e52080ba99-1" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;socket&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-2" name="rest_code_8692e16a0af7420eb581b8e52080ba99-2" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-3" name="rest_code_8692e16a0af7420eb581b8e52080ba99-3" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-3"&gt;&lt;/a&gt;&lt;span class="n"&gt;sock&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_DGRAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-4" name="rest_code_8692e16a0af7420eb581b8e52080ba99-4" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-4"&gt;&lt;/a&gt;&lt;span class="n"&gt;sock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="s1"&gt;'0.0.0.0'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;53&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-5" name="rest_code_8692e16a0af7420eb581b8e52080ba99-5" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-5"&gt;&lt;/a&gt;&lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="kc"&gt;True&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-6" name="rest_code_8692e16a0af7420eb581b8e52080ba99-6" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-6"&gt;&lt;/a&gt;    &lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;addr&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recvfrom&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;512&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-7" name="rest_code_8692e16a0af7420eb581b8e52080ba99-7" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-7"&gt;&lt;/a&gt;    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;addr&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The script must be run the script with root permissions:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ sudo python3 main.py&lt;/pre&gt;
+&lt;p&gt;Now we can test if server works by sending DNS requests from any computer:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ host abc.tun.povilasb.com&lt;/pre&gt;
+&lt;p&gt;Python script should write received buffer to stdout:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;sudo python3 main.py
+('212.59.18.8', 64329) b'Y\xbd\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x03abc\x03tun\x08povilasb\x03com\x00\x00\x01\x00\x01\x00\x00)\x10\x00\x00\x00\x80\x00\x00\x00'&lt;/pre&gt;
+&lt;p&gt;If you can see such output, it means that you set up DNS records correctly.
+Now we can replace this small Python script with one that is capable of
+encoding/decoding data to DNS requests and responses.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="data-encoding"&gt;
+&lt;h2&gt;Data encoding&lt;/h2&gt;
+&lt;p&gt;We can implement bidirectional communication on top of DNS:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;+--------+   request     +------------+
+| Client | ------------&amp;gt; | DNS Server |
++--------+               +------------+
+    ^                          |
+    |        response          |
+    +--------------------------+&lt;/pre&gt;
+&lt;p&gt;Request and response are encoded in different ways and must be handled
+separately.&lt;/p&gt;
+&lt;p&gt;Some sample Python code can be found at &lt;a class="reference external" href="https://github.com/povilasb/iptun/blob/5da201661474b5a3e0fb898f2c445929cb2a5233/iptun/dns.py"&gt;https://github.com/povilasb/iptun/blob/5da201661474b5a3e0fb898f2c445929cb2a5233/iptun/dns.py&lt;/a&gt;.
+And if you want to see a full working DNS tunneling server, check
+&lt;a class="reference external" href="https://github.com/yarrick/iodine"&gt;https://github.com/yarrick/iodine&lt;/a&gt;. Although, it's a C based project which is
+more difficult to read.&lt;/p&gt;
+&lt;section id="upstream"&gt;
+&lt;h3&gt;Upstream&lt;/h3&gt;
+&lt;p&gt;As funny as it sounds we can encode data to domain name. E.g. DNS query with
+record &lt;cite&gt;thisismydata.tun.example.com&lt;/cite&gt; carries "thisismydata" string which can
+be anything.
+We can even encode binary data this way using Base64 encoding:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;dGhpc2lzbXlkYXRhIC1uCg==.tun.example.com&lt;/pre&gt;
+&lt;p&gt;Unfortunately, DNS names have some limitations which we have to respect
+if we want our queries to be delivered &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-2" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt; max 255 bytes
+ _____________
+|             |
+v             V
+label.name.com.
+      ^  ^
+      |__|
+
+     max 63 bytes&lt;/pre&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;maximum total DNS name length is 255 bytes,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;every substring separated by dot must not exceed 63 bytes.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;So if you have data encoded to Base64 which exceeds 63 bytes, it must
+be split into multiple parts:&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;dmVyeSBsb25nIHRleHQgZXhjZWVkaW5nIDYzIGJ5dGVzLCBleGNlZWRpbmcgNjMgYnl0ZXMK&lt;/cite&gt; is
+encoded to
+&lt;cite&gt;dmVyeSBsb25nIHRleHQgZXhjZWVkaW5nIDYzIGJ5dGVzLCBleGNlZWRpbmcgNjM.gYnl0ZXMK.tun.example.com&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;Note that if you query for the same domain name twice, the query will not be
+delivered to our DNS server, instead cache will be used.
+Thus I add some random nonce to every domain name:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;data.a2.example.com
+data.m4.example.com&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="downstream"&gt;
+&lt;h3&gt;Downstream&lt;/h3&gt;
+&lt;p&gt;When encoding data to DNS response multiple record types can be used: NULL,
+PRIVATE, TXT, SRV, MX, CNAME and A records. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-3" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;
+The record type is selected in DNS query.&lt;/p&gt;
+&lt;p&gt;I know for a fact that TXT and NULL records allow arbitrary data to be attached.
+Thus you encode your data inside TXT record and send it back to the client.
+Then in Wireshark the DNS response looks like this:&lt;/p&gt;
+&lt;img alt="/images/dns_txt_resp.png" src="http://blog.povilasb.com/images/dns_txt_resp.png"&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="footnote-1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;There's actually more steps involved until DNS Resolver knows the
+DNS server it has to communicate with: &lt;a class="reference external" href="https://howdns.works/ep1/"&gt;https://howdns.works/ep1/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="footnote-2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-reference-2"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.ietf.org/rfc/rfc1035.txt"&gt;https://www.ietf.org/rfc/rfc1035.txt&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="footnote-3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-reference-3"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/yarrick/iodine#operational-info"&gt;https://github.com/yarrick/iodine#operational-info&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>dns</category><category>networking</category><guid>http://blog.povilasb.com/posts/data-tunelling-over-dns/</guid><pubDate>Thu, 12 Oct 2017 16:35:24 GMT</pubDate></item><item><title>Linux network routing table</title><link>http://blog.povilasb.com/posts/linux-network-routing-table/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Our computers can have multiple network devices: Ethernet, WiFi cards,
+virtual network devices, etc.
+On Linux when the network packets arrive to one of these devices, these
+packets are handled by device drivers and then put to networking stack.
+Then packets are dispatched to appropriate application to handle.&lt;/p&gt;
+&lt;p&gt;When the packets are sent, they are put to networking stack, e.g. via
+BSD sockets API.
+Then Linux networking stack uses a routing table to decide which network
+interface the packet will be sent to.&lt;/p&gt;
+&lt;p&gt;Routing table can be viewed with:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG    600    0        0 wlp3s0
+0.0.0.0         0.0.0.0         0.0.0.0         U     1002   0        0 enp0s25
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0
+192.168.1.0     0.0.0.0         255.255.255.0   U     600    0        0 wlp3s0&lt;/pre&gt;
+&lt;p&gt;or&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ip route show
+default via 192.168.1.1 dev wlp3s0 proto static metric 600
+default dev enp0s25 scope link metric 1002 linkdown
+10.0.0.0/24 dev tun0 proto kernel scope link src 10.0.0.1
+192.168.1.0/24 dev wlp3s0 proto kernel scope link src 192.168.1.125 metric 600&lt;/pre&gt;
+&lt;p&gt;Although &lt;cite&gt;route&lt;/cite&gt; command is deprecated &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-network-routing-table/#f1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;, I still prefer it because of
+nicer output.&lt;/p&gt;
+&lt;section id="example"&gt;
+&lt;h2&gt;Example&lt;/h2&gt;
+&lt;p&gt;Let's take the output of &lt;cite&gt;route -n&lt;/cite&gt;.
+Now what happens when we execute &lt;cite&gt;ping 8.8.8.8&lt;/cite&gt;?&lt;/p&gt;
+&lt;p&gt;Well, Linux kernel&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;matches address &lt;cite&gt;8.8.8.8&lt;/cite&gt; with &lt;cite&gt;0.0.0.0&lt;/cite&gt; (all addresses),&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;selects route with the lowest &lt;cite&gt;Metric&lt;/cite&gt; (600) because there are multiple
+routes to &lt;cite&gt;0.0.0.0&lt;/cite&gt;,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;looks up the gateway which is &lt;cite&gt;192.168.1.1&lt;/cite&gt;,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;matches gateway address with &lt;cite&gt;192.168.1.0&lt;/cite&gt;,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;looks up that destination &lt;cite&gt;192.168.1.0&lt;/cite&gt; does not have gateway meaning
+that the network is directly connected somehow,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;does NAT (network address translation),&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;writes packet to &lt;cite&gt;wlp3s0&lt;/cite&gt; interface,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;device driver sends packet to WiFi card.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/section&gt;
+&lt;section id="understanding-routing-table"&gt;
+&lt;h2&gt;Understanding routing table&lt;/h2&gt;
+&lt;p&gt;Again, let's look at &lt;cite&gt;route -n&lt;/cite&gt; output.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;Genmask&lt;/cite&gt; column is a mask applied (bitwise AND) to IP packet destination
+address.
+After &lt;cite&gt;Genmask&lt;/cite&gt; is applied, &lt;cite&gt;Destination&lt;/cite&gt; column is used to match packet
+destination.
+If the matched destination has &lt;cite&gt;Gateway&lt;/cite&gt;, packet is forwarded there,
+otherwise it's written to network interface described by column &lt;cite&gt;Iface&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;When packet destination address matches with multiple &lt;cite&gt;Destination&lt;/cite&gt; entries,
+the one with the longest prefix wins.
+For example address &lt;cite&gt;192.168.1.100&lt;/cite&gt; matches &lt;cite&gt;0.0.0.0/0&lt;/cite&gt; and &lt;cite&gt;192.168.1.0/24&lt;/cite&gt;.
+But &lt;cite&gt;192.168.1.0&lt;/cite&gt; prefix is 24 bits long, so this rule takes priority.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;Flags&lt;/cite&gt; column holds some metainfo about routes: &lt;cite&gt;U&lt;/cite&gt; - route is up, &lt;cite&gt;G&lt;/cite&gt; route
+has gateway.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;Metric&lt;/cite&gt; column is used to determine priority when multiple routes match
+packet destination address.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;Ref&lt;/cite&gt; column is not used in Linux kernel.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="manipulating-routing-table"&gt;
+&lt;h2&gt;Manipulating routing table&lt;/h2&gt;
+&lt;p&gt;We can use &lt;cite&gt;ip&lt;/cite&gt; command to add, delete, modify routes.
+E.g. we can redirect packets to desired network interfaces:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# ip route add 8.8.8.8 via 10.0.0.2&lt;/pre&gt;
+&lt;p&gt;This makes all packets with destination &lt;cite&gt;8.8.8.8&lt;/cite&gt; be written to
+&lt;a class="reference external" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/"&gt;tun0 interface&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;To delete route issue command:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# ip route del 8.8.8.8 via 10.0.0.2&lt;/pre&gt;
+&lt;p&gt;We can test which &lt;cite&gt;Destination&lt;/cite&gt; entry will be matched for given address:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ip route get 10.0.0.2
+10.0.0.2 dev tun0 src 10.0.0.1
+
+$ ip route get 8.8.8.8
+8.8.8.8 via 192.168.1.1 dev wlp3s0 src 192.168.1.125
+
+$ ip route get 192.168.1.100
+192.168.1.100 dev wlp3s0 src 192.168.1.125&lt;/pre&gt;
+&lt;p&gt;The difference between the last two routes is that NAT will be executed
+for packets destined to &lt;cite&gt;8.8.8.8&lt;/cite&gt;, while packets with destination
+&lt;cite&gt;192.168.1.100&lt;/cite&gt; will remain intact.&lt;/p&gt;
+&lt;p&gt;We can change the route metric by adding new route with different metric
+and then deleting the old one:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# ip route add default via 192.168.1.1 dev wlp3s0 proto static metric 500
+# ip route del default via 192.168.1.1 dev wlp3s0 proto static metric 600&lt;/pre&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-network-routing-table/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://xmodulo.com/linux-tcpip-networking-net-tools-iproute2.html"&gt;http://xmodulo.com/linux-tcpip-networking-net-tools-iproute2.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.cyberciti.biz/faq/what-is-a-routing-table/"&gt;https://www.cyberciti.biz/faq/what-is-a-routing-table/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;</description><category>linux</category><category>networking</category><guid>http://blog.povilasb.com/posts/linux-network-routing-table/</guid><pubDate>Mon, 28 Aug 2017 13:35:53 GMT</pubDate></item><item><title>Linux virtual network devices</title><link>http://blog.povilasb.com/posts/linux-virtual-network-devices/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Linux allows us to create virtual network devices and control them
+programmaticaly. We can read and produce raw IP or Ethernet packets.
+Such devices are called TUN or TAP and often referred to as TUN/TAP.
+TUN device is used to manipulate IP packets, TAP - Ethernet &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;TUN/TAP has a lot of uses: we can inspect, modify, generate, etc. network
+packets. OpenVPN uses TUN/TAP to route all packets through proxy server.
+Thus we can use TUN/TAP to create misc VPN services, e.g. IP over DNS &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f2" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;
+&lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f3" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;section id="overview"&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;pre class="literal-block"&gt;+------+              +------------+          +------+
+| eth0 |  &amp;lt;--------&amp;gt;  | Networking | &amp;lt;------&amp;gt; | tun0 |
++------+              |    stack   |          +------+
+                      +------------+             ^
+                                                 |
+                                                 |
+                                                 V
+                                          +-------------+
+                                          | Application |
+                                          +-------------+&lt;/pre&gt;
+&lt;p&gt;&lt;cite&gt;tun0&lt;/cite&gt; is virtual network device interface. It acts just like a regular
+interface. Except we can hook to it and control it from userspace application.&lt;/p&gt;
+&lt;p&gt;When application writes packets to &lt;cite&gt;tun0&lt;/cite&gt;, they will be put to networking
+stack and treated as if they came from a regular NIC.
+When packets arrive to networking stack with destination address that is
+routed to &lt;cite&gt;tun0&lt;/cite&gt;, they will be forwarded to userspace application.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="create-tun-device-from-cli"&gt;
+&lt;h2&gt;Create TUN device from CLI&lt;/h2&gt;
+&lt;p&gt;We can use &lt;cite&gt;ip&lt;/cite&gt; CLI command to setup the TUN device:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# ip tuntap add mode tun tun0
+# ip addr add 10.0.0.1/24 dev tun0
+# ip link set tun0 up&lt;/pre&gt;
+&lt;p&gt;Then the resulting routing table looks like:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.0.1     0.0.0.0         UG    600    0        0 wlp3s0
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0&lt;/pre&gt;
+&lt;p&gt;Which means that the packets with destination &lt;cite&gt;10.0.0.X&lt;/cite&gt; will be forwarded
+to &lt;cite&gt;tun0&lt;/cite&gt; interface.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="create-tun-device-with-python"&gt;
+&lt;h2&gt;Create TUN device with Python&lt;/h2&gt;
+&lt;p&gt;The syscalls used by &lt;cite&gt;ip tuntap&lt;/cite&gt; command might be called programmatically from
+any language including Python.
+To create TUN device we need to open &lt;cite&gt;/dev/net/tun&lt;/cite&gt; and call &lt;a class="reference external" href="https://docs.python.org/3/library/fcntl.html#fcntl.ioctl"&gt;ioctl()&lt;/a&gt; with specific
+parameters:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-1" name="rest_code_f394665351d4429b8efa6186a10d9d16-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-2" name="rest_code_f394665351d4429b8efa6186a10d9d16-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-2"&gt;&lt;/a&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;fcntl&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;ioctl&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-3" name="rest_code_f394665351d4429b8efa6186a10d9d16-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-3"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;struct&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-4" name="rest_code_f394665351d4429b8efa6186a10d9d16-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-4"&gt;&lt;/a&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-5" name="rest_code_f394665351d4429b8efa6186a10d9d16-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;TUNSETIFF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mh"&gt;0x400454ca&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-6" name="rest_code_f394665351d4429b8efa6186a10d9d16-6" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-6"&gt;&lt;/a&gt;&lt;span class="n"&gt;IFF_TUN&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mh"&gt;0x0001&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-7" name="rest_code_f394665351d4429b8efa6186a10d9d16-7" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-7"&gt;&lt;/a&gt;&lt;span class="n"&gt;IFF_NO_PI&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mh"&gt;0x1000&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-8" name="rest_code_f394665351d4429b8efa6186a10d9d16-8" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-8"&gt;&lt;/a&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-9" name="rest_code_f394665351d4429b8efa6186a10d9d16-9" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-9"&gt;&lt;/a&gt;&lt;span class="n"&gt;ftun&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"/dev/net/tun"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;O_RDWR&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-10" name="rest_code_f394665351d4429b8efa6186a10d9d16-10" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-10"&gt;&lt;/a&gt;&lt;span class="n"&gt;ioctl&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ftun&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;TUNSETIFF&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"16sH"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s2"&gt;"tun0"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;IFF_TUN&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="n"&gt;IFF_NO_PI&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;However, this is pretty low level and suits my learning needs very well.
+Although, we can definitely find some python libraries for this &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f5" id="footnote-reference-4" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;5&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt; &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f6" id="footnote-reference-5" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;6&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Also, we can programmatically set up routes using &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Netlink"&gt;Netlink&lt;/a&gt; based protocols.
+Fortunately there's a python package &lt;a class="reference external" href="https://pypi.python.org/pypi/pyroute2"&gt;pyroute2&lt;/a&gt; implementing Netlink.
+For example we can assign an IP address to TUN interface and bring up:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-1" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-1"&gt;&lt;/a&gt;&lt;span class="c1"&gt;# pip install pyroute2==0.4.19&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-2" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-2"&gt;&lt;/a&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;pyroute2&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;IPRoute&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-3" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-3"&gt;&lt;/a&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-4" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-4"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;IPRoute&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-5" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;idx&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;link_lookup&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ifname&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;'tun0'&lt;/span&gt;&lt;span class="p"&gt;)[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-6" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-6" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-6"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;addr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;'add'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;index&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;'10.0.0.1'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;prefixlen&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;24&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-7" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-7" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-7"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;link&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;'set'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;index&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;state&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;'up'&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-8" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-8" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-8"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="controlling-tun-tap-device"&gt;
+&lt;h2&gt;Controlling TUN/TAP device&lt;/h2&gt;
+&lt;p&gt;Once we have created and enabled &lt;cite&gt;tun0&lt;/cite&gt; interface we can receive and send
+raw IP or Ethernet packets, respectively.&lt;/p&gt;
+&lt;section id="receiving-packets"&gt;
+&lt;h3&gt;Receiving packets&lt;/h3&gt;
+&lt;p&gt;Let's start sending ICMP requests to &lt;cite&gt;10.0.0.4&lt;/cite&gt; which gets routed to our
+TUN device:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.0.1     0.0.0.0         UG    600    0        0 wlp3s0
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0
+192.168.0.0     0.0.0.0         255.255.255.0   U     600    0        0 wlp3s0
+
+$ ping 10.0.0.4&lt;/pre&gt;
+&lt;p&gt;Then we can receive those packets with a simple read:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-1" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-2" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-3" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-3"&gt;&lt;/a&gt;&lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="kc"&gt;True&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-4" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-4"&gt;&lt;/a&gt;    &lt;span class="n"&gt;raw_packet&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;read&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ftun&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1500&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="c1"&gt;# we get ftun descriptor by opening /dev/net/tun&lt;/span&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-5" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-5"&gt;&lt;/a&gt;    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw_packet&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The output is something like:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;b'E\x00\x00T\xef]@\x00@\x017G\n\x00\x00\x01\n\x00\x00\x04\x08\x00M\xef%\xc2\x00\x05As\x9dY\x00\x00\x00\x00\xe1\xa9\x05\x00\x00\x00\x00\x00\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&amp;amp;\'()*+,-./01234567&lt;/pre&gt;
+&lt;p&gt;which is a raw IP packet with ICMP packet as data.&lt;/p&gt;
+&lt;p&gt;By the way, seems like Linux kernel is sending &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol"&gt;SSDP&lt;/a&gt; packets
+to the TUN interface. So don't get suprised to see some unexpected traffic.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="sending-packets"&gt;
+&lt;h3&gt;Sending packets&lt;/h3&gt;
+&lt;p&gt;To send raw IP packets we write them to TUN interface:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-1" name="rest_code_9ab1a45893dc453c829b03625a180235-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-2" name="rest_code_9ab1a45893dc453c829b03625a180235-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-3" name="rest_code_9ab1a45893dc453c829b03625a180235-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-3"&gt;&lt;/a&gt;&lt;span class="n"&gt;icmp_req&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;'E&lt;/span&gt;&lt;span class="se"&gt;\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;(&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;@&lt;/span&gt;&lt;span class="se"&gt;\x01&lt;/span&gt;&lt;span class="s1"&gt;`&lt;/span&gt;&lt;span class="se"&gt;\xc2\n\x00\x00\x04\x08\x08&lt;/span&gt;&lt;span class="s1"&gt;'&lt;/span&gt;\
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-4" name="rest_code_9ab1a45893dc453c829b03625a180235-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-4"&gt;&lt;/a&gt;    &lt;span class="s1"&gt;'&lt;/span&gt;&lt;span class="se"&gt;\x08\x08\x08\x00\x0f\xaa\x00&lt;/span&gt;&lt;span class="s1"&gt;{&lt;/span&gt;&lt;span class="se"&gt;\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;test'&lt;/span&gt;
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-5" name="rest_code_9ab1a45893dc453c829b03625a180235-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ftun&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;icmp_req&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;By the way, we can use &lt;a class="reference external" href="https://github.com/mike01/pypacker"&gt;pypacker&lt;/a&gt; to
+construct and parse raw packets.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="prerequisites"&gt;
+&lt;h2&gt;Prerequisites&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;To use TUN/TAP devices python scripts must be run with root permissions.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;To forward packets from TUN/TAP to other interfaces (&lt;cite&gt;eth0&lt;/cite&gt;), packet forwarding
+must be enabled:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# echo 1 &amp;gt; /proc/sys/net/ipv4/ip_forward
+# iptables -P FORWARD ACCEPT&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;To properly route outgoing packets NAT must be enabled:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -j MASQUERADE&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/tuntap.txt"&gt;https://www.kernel.org/doc/Documentation/networking/tuntap.txt&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-2"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://code.kryo.se/iodine/"&gt;http://code.kryo.se/iodine/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-3"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://cs.brown.edu/courses/cs168/s11/handouts/dtun.pdf"&gt;http://cs.brown.edu/courses/cs168/s11/handouts/dtun.pdf&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f4" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;4&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://backreference.org/2010/03/26/tuntap-interface-tutorial/"&gt;http://backreference.org/2010/03/26/tuntap-interface-tutorial/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f5" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-4"&gt;5&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/montag451/pytun"&gt;https://github.com/montag451/pytun&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f6" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-5"&gt;6&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/Gawen/pytun"&gt;https://github.com/Gawen/pytun&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;</description><category>linux</category><category>networking</category><category>python</category><category>tap</category><category>tun</category><guid>http://blog.povilasb.com/posts/linux-virtual-network-devices/</guid><pubDate>Tue, 22 Aug 2017 18:28:32 GMT</pubDate></item><item><title>systemd: execute bash script on start</title><link>http://blog.povilasb.com/posts/systemd-execute-bash-script-on-start/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;&lt;cite&gt;systemd&lt;/cite&gt; is a not so new Linux init system. It's default on Debian systems.
+This is the very first process to start when Linux boots - it's PID is 1:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ps aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.1 139092  6876 ?        Ss   14:03   0:01 /sbin/init
+
+$ file /sbin/init
+/sbin/init: symbolic link to /lib/systemd/systemd&lt;/pre&gt;
+&lt;p&gt;I've been running systemd for a while.
+But thanks to it's System V init script compatibility I've never actually
+written any scripts for it.&lt;/p&gt;
+&lt;p&gt;I wanted to start a simple bash script after linux booted and I decided it's
+time to use systemd to take care of business.&lt;/p&gt;
+&lt;section id="unit-file"&gt;
+&lt;h2&gt;Unit file&lt;/h2&gt;
+&lt;p&gt;Unit files describe the services &lt;cite&gt;systemd&lt;/cite&gt; manages. Very simple unit file
+that starts a bash script could be:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;[Unit]
+Description=Starts some bash script
+
+[Service]
+WorkingDirectory=/home/povilas/
+Type=forking
+ExecStart=/bin/bash my_script.sh
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target&lt;/pre&gt;
+&lt;p&gt;&lt;cite&gt;WantedBy&lt;/cite&gt; option in the &lt;cite&gt;Install&lt;/cite&gt; section means that this unit is wanted by
+&lt;cite&gt;multi-user.target&lt;/cite&gt; unit. Meaning this unit becomes a dependency of
+&lt;cite&gt;multi-user.target&lt;/cite&gt; unit.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="install-unit-file"&gt;
+&lt;h2&gt;Install unit file&lt;/h2&gt;
+&lt;p&gt;Save the unit file to &lt;cite&gt;/etc/systemd/system/my_unit.service&lt;/cite&gt; and enable it with:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# systemctl enable my_unit.service&lt;/pre&gt;
+&lt;p&gt;Next time the OS boots, bash script will be executed.&lt;/p&gt;
+&lt;/section&gt;</description><category>linux</category><category>systemd</category><guid>http://blog.povilasb.com/posts/systemd-execute-bash-script-on-start/</guid><pubDate>Thu, 10 Aug 2017 11:09:19 GMT</pubDate></item><item><title>Boyer-Moore string search</title><link>http://blog.povilasb.com/posts/boyer-moore-string-search/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Boyer-Moore is a string search algorithm.
+The first time I heard about it was on FreeBSD mailing list when someone
+was explaining "why GNU grep is fast". &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f2" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;
+Although, it was invented in 1977 &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f3" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;, turns out this algorithm is
+considered one of the most efficient and very widely used even nowadays. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f1" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;So I thought I have to at least take a brief overview of this classic algorithm.&lt;/p&gt;
+&lt;section id="overview"&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;p&gt;Similarly to &lt;a class="reference external" href="https://en.wikipedia.org/wiki/String_searching_algorithm#Na.C3.AFve_string_search"&gt;naive string search&lt;/a&gt;.
+the algorithm scans text from left to right searching for the given pattern.
+Although, the pattern is matched from right to left:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;Text:    X X X A B C X X X D B C
+Pattern:       D B C - - -&amp;gt; pattern shift
+              &amp;lt;- - - pattern matching&lt;/pre&gt;
+&lt;p&gt;What makes Boyer-Moore algorithm faster than naive string search is the
+heuristics it uses to shift pattern right. Rather than shifting one symbol
+at a time, this algorithm uses some heuristics to skip multiple symbols.
+We can optionally choose which heuristics to use. In order to go fastest,
+we should use them all.&lt;/p&gt;
+&lt;p&gt;Each heuristic calculates how many positions we can skip. Then we choose the
+maximum number of skips and repeat the matching.&lt;/p&gt;
+&lt;p&gt;At first glance the algorithm looks pretty easy. But it has multiple
+cases which might make it a little cofusing.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="bad-character-heuristic"&gt;
+&lt;h2&gt;Bad character heuristic&lt;/h2&gt;
+&lt;p&gt;It states that when text does not match the pattern at a given position, we
+can shift the pattern right until it does. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f4" id="footnote-reference-4" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;4&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7
+T: X X X A B C A C
+P:     B C A C
+       0 1 2 3&lt;/pre&gt;
+&lt;p&gt;In this case the algorithm starts matching the pattern at text position 5
+and pattern position 3. The mismatch occurs at &lt;cite&gt;text_pos&lt;/cite&gt; 4 and &lt;cite&gt;pattern_pos&lt;/cite&gt; 2.
+The mismatched symbol is 'B'. 'B' exists in the &lt;cite&gt;pattern_pos&lt;/cite&gt; 0.
+Thus we can skip 2 symbols: &lt;cite&gt;2 - 0 = 2&lt;/cite&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7
+T: X X X A B C A C
+P:         B C A C
+           0 1 2 3&lt;/pre&gt;
+&lt;p&gt;In case the pattern does not have the mismatched symbol, we can move it
+past that symbol:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:     D C A C&lt;/pre&gt;
+&lt;p&gt;Mismatched symbol is &lt;cite&gt;B&lt;/cite&gt; which does not exist in the pattern.
+Thus the pattern is shifted to:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:           D C A C&lt;/pre&gt;
+&lt;section id="preprocessing"&gt;
+&lt;h3&gt;Preprocessing&lt;/h3&gt;
+&lt;p&gt;When mismatch happens we could search for a matching symbol traversing
+the pattern backwards. That would take O(n) comparisons.
+Instead we can achieve O(1) with a lookup table.
+This table is constructed once for the given pattern and it holds the last
+position for a given character.  E.g.:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-1" name="rest_code_29d83651df1346e39ab76d30cf910d5f-1" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-1"&gt;&lt;/a&gt;&lt;span class="n"&gt;pattern&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;'abca'&lt;/span&gt;
+&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-2" name="rest_code_29d83651df1346e39ab76d30cf910d5f-2" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-2"&gt;&lt;/a&gt;&lt;span class="n"&gt;table&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;'a'&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;
+&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-3" name="rest_code_29d83651df1346e39ab76d30cf910d5f-3" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-3"&gt;&lt;/a&gt;&lt;span class="n"&gt;table&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;'b'&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-4" name="rest_code_29d83651df1346e39ab76d30cf910d5f-4" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-4"&gt;&lt;/a&gt;&lt;span class="n"&gt;table&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;'c'&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1"&gt;&lt;/a&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;preproc_bad_character&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pattern&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="nb"&gt;list&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2"&gt;&lt;/a&gt;    &lt;span class="n"&gt;last_char_pos&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;256&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3"&gt;&lt;/a&gt;    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;enumerate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pattern&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4"&gt;&lt;/a&gt;        &lt;span class="n"&gt;last_char_pos&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nb"&gt;ord&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;)]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5"&gt;&lt;/a&gt;    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;last_char_pos&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="good-suffix-heuristic"&gt;
+&lt;h2&gt;Good suffix heuristic&lt;/h2&gt;
+&lt;p&gt;This heuristic is nicely explained in &lt;a class="reference external" href="https://www.youtube.com/watch?v=lkL6RkQvpMM"&gt;this video&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;It heuristic has 3 cases:&lt;/p&gt;
+&lt;ol class="arabic"&gt;
+&lt;li&gt;&lt;p&gt;the matching pattern suffix exists in another pattern place:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P: A B C D B C&lt;/pre&gt;
+&lt;p&gt;&lt;cite&gt;BC&lt;/cite&gt; matches the text and another &lt;cite&gt;BC&lt;/cite&gt; is in the pattern at position &lt;cite&gt;1&lt;/cite&gt;.
+Thus we could shift the pattern by &lt;cite&gt;3&lt;/cite&gt; positions right:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:       A B C D B C&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;the matching pattern suffix is also the prefix of a pattern:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P: B C D A B C&lt;/pre&gt;
+&lt;p&gt;In this case we can safely shift the pattern by &lt;cite&gt;4&lt;/cite&gt; positions:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:         B C D A B C&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;When none of the above cases are satisfied the pattern is shifted past
+the matched text part:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:     D A B C
+
+   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:             D A B C&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;This heuristic also has a preprocessing step to construct a lookup table.
+The algorithm is a bit more complicated and better explained in &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f6" id="footnote-reference-5" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;6&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt; &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f5" id="footnote-reference-6" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;5&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-3"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www-igm.univ-mlv.fr/~lecroq/string/node14.html"&gt;http://www-igm.univ-mlv.fr/~lecroq/string/node14.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-1"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html"&gt;https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-2"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm"&gt;https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f4" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-4"&gt;4&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.geeksforgeeks.org/pattern-searching-set-7-boyer-moore-algorithm-bad-character-heuristic/"&gt;http://www.geeksforgeeks.org/pattern-searching-set-7-boyer-moore-algorithm-bad-character-heuristic/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f5" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-6"&gt;5&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.inf.fh-flensburg.de/lang/algorithmen/pattern/bmen.htm"&gt;http://www.inf.fh-flensburg.de/lang/algorithmen/pattern/bmen.htm&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f6" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-5"&gt;6&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.geeksforgeeks.org/boyer-moore-algorithm-good-suffix-heuristic/"&gt;http://www.geeksforgeeks.org/boyer-moore-algorithm-good-suffix-heuristic/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;</description><category>algorithms</category><category>string-search</category><guid>http://blog.povilasb.com/posts/boyer-moore-string-search/</guid><pubDate>Thu, 10 Aug 2017 07:05:28 GMT</pubDate></item><item><title>Oat flour pancakes</title><link>http://blog.povilasb.com/posts/oat-flour-pancakes/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;I simply love to eat pancakes on Sunday mornings. Usually I'd go for wheat
+flour. Many people say gluten inside wheat makes you gain weight.
+Although, it might not be scientificaly proven. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/oat-flour-pancakes/#f1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;
+Anyways, I find oat flour pancakes to be less filling, thus I feal more
+energetic after eating them.&lt;/p&gt;
+&lt;section id="ingredients"&gt;
+&lt;h2&gt;Ingredients&lt;/h2&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;1¾ cup freshly ground oat flour&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;4 teaspoon sugar&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;1 tablespoon baking powder&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;¼ teaspoon salt&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;1 cup milk&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;1½ tablespoons sunflower oil&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;2 large eggs&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;2 drops of vanilla extract (optional)&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/section&gt;
+&lt;section id="instructions"&gt;
+&lt;h2&gt;Instructions&lt;/h2&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;Grind the oats inside the food processor. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/oat-flour-pancakes/#f3" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Add all wet ingredients to a mixing bowl and whisk together.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Add all dry ingredients and whisk together.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Pre-heat the pan to 66% of the maximum stove heat.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Lightly oil the pan.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Put 2 tablespoons of mixture onto the pan to form a pancake.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Cook one side until the mixture changes color then flip over.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/oat-flour-pancakes/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.jillianmichaels.com/blog/food-and-nutrition/myth-if-you-want-slim-down-go-gluten-free"&gt;https://www.jillianmichaels.com/blog/food-and-nutrition/myth-if-you-want-slim-down-go-gluten-free&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.foodprepper.com/oat-flour-pancakes-old-fashioned.php"&gt;http://www.foodprepper.com/oat-flour-pancakes-old-fashioned.php&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/oat-flour-pancakes/#footnote-reference-2"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.momables.com/how-to-make-oat-flour/"&gt;http://www.momables.com/how-to-make-oat-flour/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;</description><category>food</category><category>recipes</category><guid>http://blog.povilasb.com/posts/oat-flour-pancakes/</guid><pubDate>Sun, 06 Aug 2017 08:01:25 GMT</pubDate></item><item><title>Notes on UTF-8</title><link>http://blog.povilasb.com/posts/notes-on-utf-8/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;UTF-8 is the most popular, to my mind, character encoding invented by
+Ken Thomson (co-inventor of Unix and Go language) and Rob Pike (co-inventor
+of Go language).
+If you use Rust and Python, strings are encoded in UTF-8 by default.
+Anyway, I got interested in &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm"&gt;Boyer-Moore string search algorithm&lt;/a&gt;.
+And of course I wanted to implement it for UTF-8 which is most practical.
+Before I could do that effectively, I had to understand UTF-8 internals.&lt;/p&gt;
+&lt;section id="description"&gt;
+&lt;h2&gt;Description&lt;/h2&gt;
+&lt;p&gt;UTF-8 is pretty well described in &lt;a class="reference external" href="https://tools.ietf.org/html/rfc3629"&gt;RFC 3629&lt;/a&gt;.
+UTF-8 character size varies between 1-4 bytes. The exact size depends
+on a character, but personally I think that more common characters are encoded
+with less bytes. E.g. ASCII symbols are encoded with 1 byte, cyrillic,
+Lithuanian - 2 bytes, Japanese - 3, etc.&lt;/p&gt;
+&lt;p&gt;The maximum size of UTF-8 character code is 21 bits. Other 11 bits are
+used as metadata. This table sums up the encoding format:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;Char. number range  |        UTF-8 octet sequence
+   (hexadecimal)    |              (binary)
+--------------------+---------------------------------------------
+0000 0000-0000 007F | 0xxxxxxx
+0000 0080-0000 07FF | 110xxxxx 10xxxxxx
+0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx
+0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx&lt;/pre&gt;
+&lt;p&gt;where &lt;cite&gt;x&lt;/cite&gt; are bits used to encode character code.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="example"&gt;
+&lt;h2&gt;Example&lt;/h2&gt;
+&lt;p&gt;Let's take character &lt;cite&gt;č&lt;/cite&gt; and encode it to UTF-8. It's encoded with 2 bytes
+&lt;cite&gt;0xC48D&lt;/cite&gt; and the character code is &lt;cite&gt;0x10D&lt;/cite&gt;.
+We can test this with Rust:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code rust"&gt;&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-1" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-1" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-1"&gt;&lt;/a&gt;&lt;span class="kd"&gt;let&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;chars&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="fm"&gt;vec!&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mh"&gt;0xC4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;0x8D&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-2" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-2" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-2"&gt;&lt;/a&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;in&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;String&lt;/span&gt;::&lt;span class="n"&gt;from_utf8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;chars&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;unwrap&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;chars&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-3" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-3" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-3"&gt;&lt;/a&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="fm"&gt;println!&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"{} 0x{:X}"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;as&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;u32&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-4" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-4" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-4"&gt;&lt;/a&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The output is:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;č 0x10D&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="string-operations"&gt;
+&lt;h2&gt;String operations&lt;/h2&gt;
+&lt;p&gt;UTF-8 strings can be easily concatenated.&lt;/p&gt;
+&lt;p&gt;Character at position &lt;cite&gt;N&lt;/cite&gt; access complexity is &lt;cite&gt;O(N)&lt;/cite&gt;.
+That's why Rust strings don't have index operator &lt;cite&gt;str[]&lt;/cite&gt; because
+usually this operator means &lt;cite&gt;O(1)&lt;/cite&gt; complexity.&lt;/p&gt;
+&lt;p&gt;String search is the same as in ASCII strings. Basically, you can do byte
+to byte search. Thus Boyer-Moore search should also work with UTF-8 strings
+without bigger problems.&lt;/p&gt;
+&lt;p&gt;Iterating UTF-8 strings is a bit more complicated than ASCII. You have
+to calculate how many bytes each character takes up.&lt;/p&gt;
+&lt;/section&gt;</description><category>strings</category><category>utf-8</category><guid>http://blog.povilasb.com/posts/notes-on-utf-8/</guid><pubDate>Wed, 19 Jul 2017 13:22:43 GMT</pubDate></item><item><title>Using libc++ for OS kernel development</title><link>http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Lately I started porting &lt;a class="reference external" href="https://github.com/povilasb/simple-os"&gt;my hobby OS&lt;/a&gt;
+to C++.
+So far I've used C style error handling: function return value is interpreted
+as error code on failure. Unfortunately this is very inconvenient.
+One always has to look up the function documentation to figure out what
+values mean errors, etc. I think C++ exceptions are a superior mechanism.
+Unfortunately it's not so easy to get them working in kernel environment:
+&lt;a class="reference external" href="http://wiki.osdev.org/C%2B%2B_Exception_Support"&gt;http://wiki.osdev.org/C%2B%2B_Exception_Support&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Lately I have been learning Rust language. And it's error handling looks
+consistent and quite easy to use. One of the core classes is &lt;a class="reference external" href="https://doc.rust-lang.org/std/result/"&gt;Result&lt;/a&gt;. Basically it's a simple enum
+which holds heterogeneous values: one for return value on success, other for
+error values.
+Sounds like something like this could be easily implemented in C++ too.
+A quick google search revealed already existing library:
+&lt;a class="reference external" href="https://github.com/oktal/result"&gt;https://github.com/oktal/result&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;oktal/result&lt;/cite&gt; is a single file header only library. Thus it seemed like it
+would be easy to integrate into my kernel.
+The tricky thing is that it depends on couple of standard libraries:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_feb7cc8acb1b458db0080650b517011f-1" name="rest_code_feb7cc8acb1b458db0080650b517011f-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;iostream&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_feb7cc8acb1b458db0080650b517011f-2" name="rest_code_feb7cc8acb1b458db0080650b517011f-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;functional&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_feb7cc8acb1b458db0080650b517011f-3" name="rest_code_feb7cc8acb1b458db0080650b517011f-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;type_traits&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;So I thought why not porting the necessary libraries from libc++.&lt;/p&gt;
+&lt;section id="libc"&gt;
+&lt;h2&gt;libc++&lt;/h2&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://libcxx.llvm.org/"&gt;libc++&lt;/a&gt; is the implementation of C++ standard
+library. Usually it is used together with clang compiler.
+You can get latest libc++ sources from &lt;a class="reference external" href="https://github.com/llvm-mirror/libcxx"&gt;https://github.com/llvm-mirror/libcxx&lt;/a&gt;.
+So I thought I'll just copy/paste 2 libraries (&lt;cite&gt;functional&lt;/cite&gt; and &lt;cite&gt;type_traits&lt;/cite&gt;)
+to my own project and I'll remove the &lt;cite&gt;iostream&lt;/cite&gt; use, because it depends
+on I/O functions which currently are too different in my kernel...
+Turns out it's not so easy. &lt;cite&gt;result.h&lt;/cite&gt; includes graph roughly looks like this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;                       result.h
+                        |     |
+                        |     +-------+
+                        V             V
+                   functional    type_traits
+                    |   | |        |     |
+  +-----+---+---+---+   | +---+    |     |
+  V     |   |   |       V     V    V     V
+tuple   |   |   |  typeinfo  __config   cstddef --+
+        V   |   V                        |        |
+  exception | memory                     V        V
+            V                       __nullptr   stddef.h
+         utility&lt;/pre&gt;
+&lt;p&gt;Porting &lt;cite&gt;type_traits&lt;/cite&gt; was easy. I've just copied &lt;cite&gt;__nullptr&lt;/cite&gt;, &lt;cite&gt;cstddef&lt;/cite&gt; and
+&lt;cite&gt;__config&lt;/cite&gt; from libc++ and made small hacks in &lt;cite&gt;__config&lt;/cite&gt;.
+I took &lt;cite&gt;stddef.h&lt;/cite&gt; from GNU libc. Then &lt;cite&gt;type_traits&lt;/cite&gt; just worked.&lt;/p&gt;
+&lt;p&gt;But I faced more issues, when I started investigating &lt;cite&gt;functional&lt;/cite&gt;
+library. The problem is that it depends on exceptions which are disabled
+in my kernel environment.
+From this point it seemed just too much work to continue.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="system-predefined-macros"&gt;
+&lt;h2&gt;System predefined macros&lt;/h2&gt;
+&lt;p&gt;&lt;cite&gt;__config&lt;/cite&gt; in libc++ has such code:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-1" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-1"&gt;&lt;/a&gt;&lt;span class="c1"&gt;// Need to detect which libc we're using if we're on Linux.&lt;/span&gt;
+&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-2" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#if defined(__linux__)&lt;/span&gt;
+&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-3" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;features.h&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-4" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-4" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-4"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#endif &lt;/span&gt;&lt;span class="c1"&gt;// defined(__linux__)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;cite&gt;__linux__&lt;/cite&gt; is a predefined compiler macro which in this case enables
+&lt;cite&gt;features.h&lt;/cite&gt; include, if you're compiling a Linux program.
+Although, my OS kernel code is not meant to be run on Linux, g++ and clang
+still have this macro defined if I'm compiling on Linux.
+I can test predefined macros like this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ touch dummy.hh
+$ g++ -dM -E dummy.hh
+#define __unix__ 1
+#define __cpp_binary_literals 201304
+#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+#define __x86_64 1
+#define __linux 1
+#define __unix 1
+#define __UINT32_MAX__ 0xffffffffU
+#define __linux__ 1
+...&lt;/pre&gt;
+&lt;p&gt;Obviously this macro causes me problems: I don't have &lt;cite&gt;features.h&lt;/cite&gt; for my
+system. Thus I want to undefine &lt;cite&gt;__linux__&lt;/cite&gt;, &lt;cite&gt;__linux&lt;/cite&gt;, etc.&lt;/p&gt;
+&lt;section id="undefining-macros"&gt;
+&lt;h3&gt;Undefining macros&lt;/h3&gt;
+&lt;p&gt;I think superior method to solve macro issues is to create a cross
+compiler. E.g. Redox OS has taken this path with it's &lt;a class="reference external" href="https://github.com/redox-os/gcc/commit/37820fd5d9a7c9037a4a1be0816610cbd00ae59d#diff-dbff4af31a2e5a58eeb80832dead0b95R19"&gt;gcc port&lt;/a&gt;:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-1" name="rest_code_d84a7b536cf146ee98778c05d49ec249-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#define TARGET_OS_CPP_BUILTINS()      \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-2" name="rest_code_d84a7b536cf146ee98778c05d49ec249-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;   do {                                \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-3" name="rest_code_d84a7b536cf146ee98778c05d49ec249-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_define ("__redox__");      \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-4" name="rest_code_d84a7b536cf146ee98778c05d49ec249-4" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-4"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_define ("__unix__");      \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-5" name="rest_code_d84a7b536cf146ee98778c05d49ec249-5" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-5"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_assert ("system=redox");   \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-6" name="rest_code_d84a7b536cf146ee98778c05d49ec249-6" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-6"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_assert ("system=unix");   \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-7" name="rest_code_d84a7b536cf146ee98778c05d49ec249-7" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-7"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_assert ("system=posix");   \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-8" name="rest_code_d84a7b536cf146ee98778c05d49ec249-8" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-8"&gt;&lt;/a&gt;&lt;span class="cp"&gt;   } while(0);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Unfortunately, cross compiler is too much work for my project.&lt;/p&gt;
+&lt;p&gt;The other way to workaround macro issues is to use &lt;cite&gt;#undef&lt;/cite&gt; directive:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#undef __linux__&lt;/span&gt;
+&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#if defined(__linux__)&lt;/span&gt;
+&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;features.h&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#endif &lt;/span&gt;&lt;span class="c1"&gt;// defined(__linux__)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This was the change I made to &lt;cite&gt;__config&lt;/cite&gt;.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="conclusions"&gt;
+&lt;h2&gt;Conclusions&lt;/h2&gt;
+&lt;p&gt;Using C++ standard library in kernel environment would definitely save me a
+lot of work. Unfortunately, it relies on exceptions and RTTI support.
+Thus porting libc++ to current kernel environment is just too much work.
+The other approach could be to reimplement standard library that does not use
+exceptions.&lt;/p&gt;
+&lt;p&gt;P.S. &lt;a class="reference external" href="https://github.com/electronicarts/EASTL"&gt;https://github.com/electronicarts/EASTL&lt;/a&gt; is STL implementation from
+Electronic Arts. It provides the ability to disable exceptions.
+Unfortunately, in such case no alternative error handling is provided.&lt;/p&gt;
+&lt;/section&gt;</description><category>c++</category><category>libc++</category><category>osdev</category><guid>http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/</guid><pubDate>Tue, 11 Jul 2017 09:38:11 GMT</pubDate></item></channel></rss>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about ml)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/ml.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Machine learning in 3 lines of code</title><link>http://blog.povilasb.com/posts/machine-learning-intro/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;This is a very light introduction into machine learning.
+I will demonstrate how to solve one specific problem using
+&lt;a class="reference external" href="http://scikit-learn.org/"&gt;scikit-learn&lt;/a&gt;, a machine learning framework in
+just 3 lines of code.&lt;/p&gt;
+&lt;section id="problem"&gt;
+&lt;h2&gt;Problem&lt;/h2&gt;
+&lt;p&gt;I created a syntetic problem where data is very simple so we don't have
+to struggle with distilling it.&lt;/p&gt;
+&lt;p&gt;Based on very simple rules we have labeled points on a coordinate plane.
+If x &amp;gt; 0 and y &amp;lt; 0 then the point is labeled as &lt;em&gt;X&lt;/em&gt;.
+If x &amp;lt; 0 and y &amp;gt; 0 then the point is labeled as 'O'.&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   o        ^ y
+       o    |
+     o      |
+            |
+------------+-------------&amp;gt; x
+            |    x
+            |       x
+            |  x&lt;/pre&gt;
+&lt;p&gt;Our task is to label any given point.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Input&lt;/strong&gt;: (x, y)&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;: X or O&lt;/p&gt;
+&lt;p&gt;E.g.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Input&lt;/strong&gt;: (1, -7)&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;: &lt;em&gt;X&lt;/em&gt;&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="manual-solution"&gt;
+&lt;h2&gt;Manual solution&lt;/h2&gt;
+&lt;p&gt;In this case to implement the classification manually using if statements is
+really easy:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_20d166dccb324d2b91be176b01cb0dcb-1" name="rest_code_20d166dccb324d2b91be176b01cb0dcb-1" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_20d166dccb324d2b91be176b01cb0dcb-1"&gt;&lt;/a&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;label_for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;a id="rest_code_20d166dccb324d2b91be176b01cb0dcb-2" name="rest_code_20d166dccb324d2b91be176b01cb0dcb-2" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_20d166dccb324d2b91be176b01cb0dcb-2"&gt;&lt;/a&gt;    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_20d166dccb324d2b91be176b01cb0dcb-3" name="rest_code_20d166dccb324d2b91be176b01cb0dcb-3" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_20d166dccb324d2b91be176b01cb0dcb-3"&gt;&lt;/a&gt;        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s1"&gt;'o'&lt;/span&gt;
+&lt;a id="rest_code_20d166dccb324d2b91be176b01cb0dcb-4" name="rest_code_20d166dccb324d2b91be176b01cb0dcb-4" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_20d166dccb324d2b91be176b01cb0dcb-4"&gt;&lt;/a&gt;    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_20d166dccb324d2b91be176b01cb0dcb-5" name="rest_code_20d166dccb324d2b91be176b01cb0dcb-5" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_20d166dccb324d2b91be176b01cb0dcb-5"&gt;&lt;/a&gt;        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s1"&gt;'x'&lt;/span&gt;
+&lt;a id="rest_code_20d166dccb324d2b91be176b01cb0dcb-6" name="rest_code_20d166dccb324d2b91be176b01cb0dcb-6" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_20d166dccb324d2b91be176b01cb0dcb-6"&gt;&lt;/a&gt;
+&lt;a id="rest_code_20d166dccb324d2b91be176b01cb0dcb-7" name="rest_code_20d166dccb324d2b91be176b01cb0dcb-7" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_20d166dccb324d2b91be176b01cb0dcb-7"&gt;&lt;/a&gt;    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s1"&gt;'?'&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Anyway let's compare with the machine learning implementation.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="machine-learning-solution"&gt;
+&lt;h2&gt;Machine learning solution&lt;/h2&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_76187e2246334fafa548e9600353b810-1" name="rest_code_76187e2246334fafa548e9600353b810-1" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_76187e2246334fafa548e9600353b810-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;sklearn.neighbors&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;KNeighborsClassifier&lt;/span&gt;
+&lt;a id="rest_code_76187e2246334fafa548e9600353b810-2" name="rest_code_76187e2246334fafa548e9600353b810-2" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_76187e2246334fafa548e9600353b810-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_76187e2246334fafa548e9600353b810-3" name="rest_code_76187e2246334fafa548e9600353b810-3" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_76187e2246334fafa548e9600353b810-3"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;coords&lt;/span&gt;
+&lt;a id="rest_code_76187e2246334fafa548e9600353b810-4" name="rest_code_76187e2246334fafa548e9600353b810-4" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_76187e2246334fafa548e9600353b810-4"&gt;&lt;/a&gt;
+&lt;a id="rest_code_76187e2246334fafa548e9600353b810-5" name="rest_code_76187e2246334fafa548e9600353b810-5" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_76187e2246334fafa548e9600353b810-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;clf&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;KNeighborsClassifier&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;a id="rest_code_76187e2246334fafa548e9600353b810-6" name="rest_code_76187e2246334fafa548e9600353b810-6" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_76187e2246334fafa548e9600353b810-6"&gt;&lt;/a&gt;&lt;span class="n"&gt;clf&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;fit&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;training_data&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;coords&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;make_n_random&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;)))&lt;/span&gt;
+&lt;a id="rest_code_76187e2246334fafa548e9600353b810-7" name="rest_code_76187e2246334fafa548e9600353b810-7" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_76187e2246334fafa548e9600353b810-7"&gt;&lt;/a&gt;&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;clf&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;predict&lt;/span&gt;&lt;span class="p"&gt;([[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="p"&gt;]]))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Basically the last 3 lines of code create the classifier, train it with
+sample data and predict the labels for the given sample coordinates.
+The full solution code is in
+&lt;a class="reference external" href="https://github.com/povilasb/machine-learning/blob/master/labeled-coordinates/x_o.py"&gt;https://github.com/povilasb/machine-learning/blob/master/labeled-coordinates/x_o.py&lt;/a&gt;.
+If we run it, we get the output:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;['x' 'o']&lt;/pre&gt;
+&lt;p&gt;Meaning (1, -7) was labeled as 'x' and (-1, 7) as 'o'.
+Which is correct.&lt;/p&gt;
+&lt;p&gt;Let's take a deeper look how this actually works.&lt;/p&gt;
+&lt;section id="obtain-data"&gt;
+&lt;h3&gt;Obtain data&lt;/h3&gt;
+&lt;p&gt;To make our classifier understand which coordinates have which labels we
+must train it with the sample data.&lt;/p&gt;
+&lt;p&gt;We will not get training data from anywhere. Instead we will generate it.
+We'll use &lt;cite&gt;generate_n_random()&lt;/cite&gt; function from
+&lt;a class="reference external" href="https://github.com/povilasb/machine-learning/blob/master/labeled-coordinates/coords.py"&gt;coords&lt;/a&gt;
+module to generate N coordinates that comply with my given rules.
+Basically, this function returns a list of labeled coordinates:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_14bc8cbcca0d4677b77ecfb55b19c4b6-1" name="rest_code_14bc8cbcca0d4677b77ecfb55b19c4b6-1" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_14bc8cbcca0d4677b77ecfb55b19c4b6-1"&gt;&lt;/a&gt;&lt;span class="p"&gt;[(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;'x'&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;'y'&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="o"&gt;...&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="scrub-data"&gt;
+&lt;h3&gt;Scrub data&lt;/h3&gt;
+&lt;p&gt;&lt;cite&gt;coords.make_n_random()&lt;/cite&gt; generates labeled coordinates in a different format
+than the &lt;cite&gt;scikit-learn&lt;/cite&gt; classifier expects.
+So we need to reformat our training data.&lt;/p&gt;
+&lt;p&gt;That's where we use &lt;cite&gt;training_data()&lt;/cite&gt; function:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_f21860db033c4e709976bea2500e8852-1" name="rest_code_f21860db033c4e709976bea2500e8852-1" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_f21860db033c4e709976bea2500e8852-1"&gt;&lt;/a&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;training_data&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;coordinates&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;a id="rest_code_f21860db033c4e709976bea2500e8852-2" name="rest_code_f21860db033c4e709976bea2500e8852-2" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_f21860db033c4e709976bea2500e8852-2"&gt;&lt;/a&gt;    &lt;span class="sd"&gt;"""Converts coordinates to classifier acceptable format."""&lt;/span&gt;
+&lt;a id="rest_code_f21860db033c4e709976bea2500e8852-3" name="rest_code_f21860db033c4e709976bea2500e8852-3" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_f21860db033c4e709976bea2500e8852-3"&gt;&lt;/a&gt;    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+&lt;a id="rest_code_f21860db033c4e709976bea2500e8852-4" name="rest_code_f21860db033c4e709976bea2500e8852-4" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_f21860db033c4e709976bea2500e8852-4"&gt;&lt;/a&gt;        &lt;span class="p"&gt;[[&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;_&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;coordinates&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+&lt;a id="rest_code_f21860db033c4e709976bea2500e8852-5" name="rest_code_f21860db033c4e709976bea2500e8852-5" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_f21860db033c4e709976bea2500e8852-5"&gt;&lt;/a&gt;        &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;label&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;_&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;_&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;label&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;coordinates&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;a id="rest_code_f21860db033c4e709976bea2500e8852-6" name="rest_code_f21860db033c4e709976bea2500e8852-6" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_f21860db033c4e709976bea2500e8852-6"&gt;&lt;/a&gt;    &lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;It separates coordinates and labels into two separate arrays.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="classify-new-data"&gt;
+&lt;h3&gt;Classify new data&lt;/h3&gt;
+&lt;p&gt;Once we have preprocessed data we can continue with training the model
+and classifying new coordinates:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-1" name="rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-1" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-1"&gt;&lt;/a&gt;&lt;span class="n"&gt;clf&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;KNeighborsClassifier&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;a id="rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-2" name="rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-2" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-2"&gt;&lt;/a&gt;&lt;span class="n"&gt;clf&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;fit&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;training_data&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;coords&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;make_n_random&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;)))&lt;/span&gt;
+&lt;a id="rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-3" name="rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-3" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_ea9f515e0dee4257b39a51c3cc48fa4d-3"&gt;&lt;/a&gt;&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;clf&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;predict&lt;/span&gt;&lt;span class="p"&gt;([[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="p"&gt;]]))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;cite&gt;KNeighborsClassifier&lt;/cite&gt; is a python class that implements the
+&lt;a class="reference external" href="https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm"&gt;k-nearest neighbors algorithm&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;clf.fit()&lt;/cite&gt; trains the classifier with the given labeled data.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;clf.predict()&lt;/cite&gt; returns predicted labels for the specified coordinates.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="machine-learning-vs-manual-solution"&gt;
+&lt;h2&gt;Machine learning vs manual solution&lt;/h2&gt;
+&lt;p&gt;In this case it's obvious that solving the problem with if statements
+is way easier: you don't need to gather any data, scrub it, etc.&lt;/p&gt;
+&lt;p&gt;But what if our input data changes as time goes by?&lt;/p&gt;
+&lt;p&gt;Let's say now every coordinate where x &amp;gt; 0 and y &amp;gt; 0 is labeled as 's':&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   o        ^ y
+       o    |    s
+     o      |       s
+            | s
+------------+-------------&amp;gt; x
+            |    x
+            |       x
+            |  x&lt;/pre&gt;
+&lt;p&gt;In a machine learning-based implementation we don't need to change anything.
+We just have to retrain the model with new data.&lt;/p&gt;
+&lt;p&gt;If we implemented the classification manually, we would have to program a new
+rule:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-1" name="rest_code_8d41a3417576489fb9cc31e19fb07252-1" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-1"&gt;&lt;/a&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;label_for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-2" name="rest_code_8d41a3417576489fb9cc31e19fb07252-2" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-2"&gt;&lt;/a&gt;    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-3" name="rest_code_8d41a3417576489fb9cc31e19fb07252-3" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-3"&gt;&lt;/a&gt;        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s1"&gt;'o'&lt;/span&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-4" name="rest_code_8d41a3417576489fb9cc31e19fb07252-4" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-4"&gt;&lt;/a&gt;    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-5" name="rest_code_8d41a3417576489fb9cc31e19fb07252-5" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-5"&gt;&lt;/a&gt;        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s1"&gt;'x'&lt;/span&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-6" name="rest_code_8d41a3417576489fb9cc31e19fb07252-6" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-6"&gt;&lt;/a&gt;&lt;span class="o"&gt;+&lt;/span&gt;   &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;y&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-7" name="rest_code_8d41a3417576489fb9cc31e19fb07252-7" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-7"&gt;&lt;/a&gt;&lt;span class="o"&gt;+&lt;/span&gt;       &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s1"&gt;'s'&lt;/span&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-8" name="rest_code_8d41a3417576489fb9cc31e19fb07252-8" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-8"&gt;&lt;/a&gt;
+&lt;a id="rest_code_8d41a3417576489fb9cc31e19fb07252-9" name="rest_code_8d41a3417576489fb9cc31e19fb07252-9" href="http://blog.povilasb.com/posts/machine-learning-intro/#rest_code_8d41a3417576489fb9cc31e19fb07252-9"&gt;&lt;/a&gt;    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s1"&gt;'?'&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="conclusions"&gt;
+&lt;h2&gt;Conclusions&lt;/h2&gt;
+&lt;p&gt;When we use a framework it might be really easy to solve problems using
+machine learning.&lt;/p&gt;
+&lt;p&gt;The example problem was easy to implement using if statements.
+But any input data changes require to adopt the algorithm.
+Also, in real life scenarios problems are not that simple.
+For example if we wanted to recognize digits in an image we should program
+10 different cases for different digits.
+Also, if the digit font changes, we would have to adopt code, etc.
+Using machine learning all we need to do is to train our model with new data.
+And this is way more scalable.&lt;/p&gt;
+&lt;p&gt;So machine learning helps to solve a lot of otherwise unsolvable problems.
+And we don't really need to understand the maths behind it because
+there are great tools that do the job for us.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="environment-setup"&gt;
+&lt;h2&gt;Environment setup&lt;/h2&gt;
+&lt;p&gt;I used the &lt;cite&gt;scikit-learn&lt;/cite&gt; framework with python 3.
+It depends on a lot of other packages.
+So if you dont have &lt;cite&gt;scikit-learn&lt;/cite&gt; installed on your machine,
+I created a &lt;a class="reference external" href="https://hub.docker.com/r/povilasb/scikit-learn/"&gt;Docker container&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Now all you have to do to run your python script in this environment is:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ docker run -it --rm=true -v `pwd`:/tmp/ml povilasb/scikit-learn python3 /tmp/ml/x_o.py&lt;/pre&gt;
+&lt;p&gt;This command will download Docker image, create a container, run the
+specified script in it and finally destroy it.&lt;/p&gt;
+&lt;/section&gt;</description><category>ml</category><category>python</category><guid>http://blog.povilasb.com/posts/machine-learning-intro/</guid><pubDate>Sun, 07 Aug 2016 02:34:00 GMT</pubDate></item></channel></rss>

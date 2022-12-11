@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about tap)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/tap.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Linux virtual network devices</title><link>http://blog.povilasb.com/posts/linux-virtual-network-devices/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Linux allows us to create virtual network devices and control them
+programmaticaly. We can read and produce raw IP or Ethernet packets.
+Such devices are called TUN or TAP and often referred to as TUN/TAP.
+TUN device is used to manipulate IP packets, TAP - Ethernet &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;TUN/TAP has a lot of uses: we can inspect, modify, generate, etc. network
+packets. OpenVPN uses TUN/TAP to route all packets through proxy server.
+Thus we can use TUN/TAP to create misc VPN services, e.g. IP over DNS &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f2" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;
+&lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f3" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;section id="overview"&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;pre class="literal-block"&gt;+------+              +------------+          +------+
+| eth0 |  &amp;lt;--------&amp;gt;  | Networking | &amp;lt;------&amp;gt; | tun0 |
++------+              |    stack   |          +------+
+                      +------------+             ^
+                                                 |
+                                                 |
+                                                 V
+                                          +-------------+
+                                          | Application |
+                                          +-------------+&lt;/pre&gt;
+&lt;p&gt;&lt;cite&gt;tun0&lt;/cite&gt; is virtual network device interface. It acts just like a regular
+interface. Except we can hook to it and control it from userspace application.&lt;/p&gt;
+&lt;p&gt;When application writes packets to &lt;cite&gt;tun0&lt;/cite&gt;, they will be put to networking
+stack and treated as if they came from a regular NIC.
+When packets arrive to networking stack with destination address that is
+routed to &lt;cite&gt;tun0&lt;/cite&gt;, they will be forwarded to userspace application.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="create-tun-device-from-cli"&gt;
+&lt;h2&gt;Create TUN device from CLI&lt;/h2&gt;
+&lt;p&gt;We can use &lt;cite&gt;ip&lt;/cite&gt; CLI command to setup the TUN device:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# ip tuntap add mode tun tun0
+# ip addr add 10.0.0.1/24 dev tun0
+# ip link set tun0 up&lt;/pre&gt;
+&lt;p&gt;Then the resulting routing table looks like:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.0.1     0.0.0.0         UG    600    0        0 wlp3s0
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0&lt;/pre&gt;
+&lt;p&gt;Which means that the packets with destination &lt;cite&gt;10.0.0.X&lt;/cite&gt; will be forwarded
+to &lt;cite&gt;tun0&lt;/cite&gt; interface.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="create-tun-device-with-python"&gt;
+&lt;h2&gt;Create TUN device with Python&lt;/h2&gt;
+&lt;p&gt;The syscalls used by &lt;cite&gt;ip tuntap&lt;/cite&gt; command might be called programmatically from
+any language including Python.
+To create TUN device we need to open &lt;cite&gt;/dev/net/tun&lt;/cite&gt; and call &lt;a class="reference external" href="https://docs.python.org/3/library/fcntl.html#fcntl.ioctl"&gt;ioctl()&lt;/a&gt; with specific
+parameters:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-1" name="rest_code_f394665351d4429b8efa6186a10d9d16-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-2" name="rest_code_f394665351d4429b8efa6186a10d9d16-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-2"&gt;&lt;/a&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;fcntl&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;ioctl&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-3" name="rest_code_f394665351d4429b8efa6186a10d9d16-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-3"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;struct&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-4" name="rest_code_f394665351d4429b8efa6186a10d9d16-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-4"&gt;&lt;/a&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-5" name="rest_code_f394665351d4429b8efa6186a10d9d16-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;TUNSETIFF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mh"&gt;0x400454ca&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-6" name="rest_code_f394665351d4429b8efa6186a10d9d16-6" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-6"&gt;&lt;/a&gt;&lt;span class="n"&gt;IFF_TUN&lt;/span&gt;   &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mh"&gt;0x0001&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-7" name="rest_code_f394665351d4429b8efa6186a10d9d16-7" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-7"&gt;&lt;/a&gt;&lt;span class="n"&gt;IFF_NO_PI&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mh"&gt;0x1000&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-8" name="rest_code_f394665351d4429b8efa6186a10d9d16-8" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-8"&gt;&lt;/a&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-9" name="rest_code_f394665351d4429b8efa6186a10d9d16-9" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-9"&gt;&lt;/a&gt;&lt;span class="n"&gt;ftun&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"/dev/net/tun"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;O_RDWR&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_f394665351d4429b8efa6186a10d9d16-10" name="rest_code_f394665351d4429b8efa6186a10d9d16-10" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_f394665351d4429b8efa6186a10d9d16-10"&gt;&lt;/a&gt;&lt;span class="n"&gt;ioctl&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ftun&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;TUNSETIFF&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"16sH"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s2"&gt;"tun0"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;IFF_TUN&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="n"&gt;IFF_NO_PI&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;However, this is pretty low level and suits my learning needs very well.
+Although, we can definitely find some python libraries for this &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f5" id="footnote-reference-4" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;5&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt; &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#f6" id="footnote-reference-5" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;6&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Also, we can programmatically set up routes using &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Netlink"&gt;Netlink&lt;/a&gt; based protocols.
+Fortunately there's a python package &lt;a class="reference external" href="https://pypi.python.org/pypi/pyroute2"&gt;pyroute2&lt;/a&gt; implementing Netlink.
+For example we can assign an IP address to TUN interface and bring up:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-1" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-1"&gt;&lt;/a&gt;&lt;span class="c1"&gt;# pip install pyroute2==0.4.19&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-2" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-2"&gt;&lt;/a&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;pyroute2&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;IPRoute&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-3" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-3"&gt;&lt;/a&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-4" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-4"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;IPRoute&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-5" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;idx&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;link_lookup&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ifname&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;'tun0'&lt;/span&gt;&lt;span class="p"&gt;)[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-6" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-6" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-6"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;addr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;'add'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;index&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;'10.0.0.1'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;prefixlen&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;24&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-7" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-7" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-7"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;link&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;'set'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;index&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;idx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;state&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;'up'&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-8" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-8" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9a388a58603f4de69a63c2da77ef3b64-8"&gt;&lt;/a&gt;&lt;span class="n"&gt;ip&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="controlling-tun-tap-device"&gt;
+&lt;h2&gt;Controlling TUN/TAP device&lt;/h2&gt;
+&lt;p&gt;Once we have created and enabled &lt;cite&gt;tun0&lt;/cite&gt; interface we can receive and send
+raw IP or Ethernet packets, respectively.&lt;/p&gt;
+&lt;section id="receiving-packets"&gt;
+&lt;h3&gt;Receiving packets&lt;/h3&gt;
+&lt;p&gt;Let's start sending ICMP requests to &lt;cite&gt;10.0.0.4&lt;/cite&gt; which gets routed to our
+TUN device:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.0.1     0.0.0.0         UG    600    0        0 wlp3s0
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0
+192.168.0.0     0.0.0.0         255.255.255.0   U     600    0        0 wlp3s0
+
+$ ping 10.0.0.4&lt;/pre&gt;
+&lt;p&gt;Then we can receive those packets with a simple read:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-1" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-2" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-3" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-3"&gt;&lt;/a&gt;&lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="kc"&gt;True&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-4" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-4"&gt;&lt;/a&gt;    &lt;span class="n"&gt;raw_packet&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;read&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ftun&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1500&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="c1"&gt;# we get ftun descriptor by opening /dev/net/tun&lt;/span&gt;
+&lt;a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-5" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_25edf3f069ce494a89fa3d6c32920f82-5"&gt;&lt;/a&gt;    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw_packet&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The output is something like:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;b'E\x00\x00T\xef]@\x00@\x017G\n\x00\x00\x01\n\x00\x00\x04\x08\x00M\xef%\xc2\x00\x05As\x9dY\x00\x00\x00\x00\xe1\xa9\x05\x00\x00\x00\x00\x00\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&amp;amp;\'()*+,-./01234567&lt;/pre&gt;
+&lt;p&gt;which is a raw IP packet with ICMP packet as data.&lt;/p&gt;
+&lt;p&gt;By the way, seems like Linux kernel is sending &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol"&gt;SSDP&lt;/a&gt; packets
+to the TUN interface. So don't get suprised to see some unexpected traffic.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="sending-packets"&gt;
+&lt;h3&gt;Sending packets&lt;/h3&gt;
+&lt;p&gt;To send raw IP packets we write them to TUN interface:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-1" name="rest_code_9ab1a45893dc453c829b03625a180235-1" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-2" name="rest_code_9ab1a45893dc453c829b03625a180235-2" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-3" name="rest_code_9ab1a45893dc453c829b03625a180235-3" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-3"&gt;&lt;/a&gt;&lt;span class="n"&gt;icmp_req&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;'E&lt;/span&gt;&lt;span class="se"&gt;\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;(&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;@&lt;/span&gt;&lt;span class="se"&gt;\x01&lt;/span&gt;&lt;span class="s1"&gt;`&lt;/span&gt;&lt;span class="se"&gt;\xc2\n\x00\x00\x04\x08\x08&lt;/span&gt;&lt;span class="s1"&gt;'&lt;/span&gt;\
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-4" name="rest_code_9ab1a45893dc453c829b03625a180235-4" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-4"&gt;&lt;/a&gt;    &lt;span class="s1"&gt;'&lt;/span&gt;&lt;span class="se"&gt;\x08\x08\x08\x00\x0f\xaa\x00&lt;/span&gt;&lt;span class="s1"&gt;{&lt;/span&gt;&lt;span class="se"&gt;\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;test'&lt;/span&gt;
+&lt;a id="rest_code_9ab1a45893dc453c829b03625a180235-5" name="rest_code_9ab1a45893dc453c829b03625a180235-5" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#rest_code_9ab1a45893dc453c829b03625a180235-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ftun&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;icmp_req&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;By the way, we can use &lt;a class="reference external" href="https://github.com/mike01/pypacker"&gt;pypacker&lt;/a&gt; to
+construct and parse raw packets.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="prerequisites"&gt;
+&lt;h2&gt;Prerequisites&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;To use TUN/TAP devices python scripts must be run with root permissions.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;To forward packets from TUN/TAP to other interfaces (&lt;cite&gt;eth0&lt;/cite&gt;), packet forwarding
+must be enabled:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# echo 1 &amp;gt; /proc/sys/net/ipv4/ip_forward
+# iptables -P FORWARD ACCEPT&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;To properly route outgoing packets NAT must be enabled:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -j MASQUERADE&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/tuntap.txt"&gt;https://www.kernel.org/doc/Documentation/networking/tuntap.txt&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-2"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://code.kryo.se/iodine/"&gt;http://code.kryo.se/iodine/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-3"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://cs.brown.edu/courses/cs168/s11/handouts/dtun.pdf"&gt;http://cs.brown.edu/courses/cs168/s11/handouts/dtun.pdf&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f4" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;4&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://backreference.org/2010/03/26/tuntap-interface-tutorial/"&gt;http://backreference.org/2010/03/26/tuntap-interface-tutorial/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f5" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-4"&gt;5&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/montag451/pytun"&gt;https://github.com/montag451/pytun&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f6" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/#footnote-reference-5"&gt;6&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/Gawen/pytun"&gt;https://github.com/Gawen/pytun&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;</description><category>linux</category><category>networking</category><category>python</category><category>tap</category><category>tun</category><guid>http://blog.povilasb.com/posts/linux-virtual-network-devices/</guid><pubDate>Tue, 22 Aug 2017 18:28:32 GMT</pubDate></item></channel></rss>

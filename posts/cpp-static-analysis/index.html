@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Static C++ code analysis | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/cpp-static-analysis/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../cpp-googletest-intro/" title="C++ unit tests with googletest" type="text/html">
+<link rel="next" href="../time-tracker-in-1day/" title="How I made my own time tracking tool in 1 day" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Static C++ code analysis">
+<meta property="og:url" content="http://blog.povilasb.com/posts/cpp-static-analysis/">
+<meta property="og:description" content="Static code analysis
+Static code analysis is the process of detecting errors and defects in
+software's source code. Static analysis can be viewed as an automated code
+review process.
+
+Tools
+
+scan-buil">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2014-03-16T20:39:00+02:00">
+<meta property="article:tag" content="cpp">
+<meta property="article:tag" content="qa">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Static C++ code analysis</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2014-03-16T20:39:00+02:00" itemprop="datePublished" title="2014-03-16 20:39">2014-03-16 20:39</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <section id="static-code-analysis"><h2>Static code analysis</h2>
+<p>Static code analysis is the process of detecting errors and defects in
+software's source code. Static analysis can be viewed as an automated code
+review process.</p>
+<section id="tools"><h3>Tools</h3>
+<ul class="simple">
+<li><p>scan-build from LLVM project <a class="footnote-reference brackets" href="#f2" id="footnote-reference-1" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.</p></li>
+<li><p>Cppcheck</p></li>
+<li><p>Flint <a class="footnote-reference brackets" href="#f5" id="footnote-reference-2" role="doc-noteref"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></a></p></li>
+<li><p>Many more <a class="footnote-reference brackets" href="#f3" id="footnote-reference-3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.</p></li>
+</ul>
+<section id="scan-build"><h4>scan-build</h4>
+<p>Let's see how to analyze c++ code with scan-build.
+Again I will be using Debian 7 and cmake to build my c++ programs.</p>
+<section id="get-the-clang-package"><h5>Get the clang package</h5>
+<p>LLVM provides scan-build in a debian package <a class="footnote-reference brackets" href="#f1" id="footnote-reference-4" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+<ol class="arabic simple">
+<li><p>Add the apt key of LLVM repository</p></li>
+</ol>
+<div class="code"><pre class="code bash"><a id="rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1" name="rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1" href="#rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1"></a>$ wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key<span class="p">|</span>sudo apt-key add -
+</pre></div>
+<ol class="arabic simple" start="2">
+<li><p>Add the LLVM repos to apt sources directory</p></li>
+</ol>
+<div class="code"><pre class="code bash"><a id="rest_code_e69274fc73af4595b7daa07c005e21f0-1" name="rest_code_e69274fc73af4595b7daa07c005e21f0-1" href="#rest_code_e69274fc73af4595b7daa07c005e21f0-1"></a>$ sudo <span class="nb">echo</span> <span class="s2">"deb http://llvm.org/apt/wheezy/ llvm-toolchain-wheezy main"</span>
+<a id="rest_code_e69274fc73af4595b7daa07c005e21f0-2" name="rest_code_e69274fc73af4595b7daa07c005e21f0-2" href="#rest_code_e69274fc73af4595b7daa07c005e21f0-2"></a>  &gt; /etc/apt/sources.list.d/llvm-clang.list
+<a id="rest_code_e69274fc73af4595b7daa07c005e21f0-3" name="rest_code_e69274fc73af4595b7daa07c005e21f0-3" href="#rest_code_e69274fc73af4595b7daa07c005e21f0-3"></a>$ sudo <span class="nb">echo</span> <span class="s2">"deb-src http://llvm.org/apt/wheezy/ llvm-toolchain-wheezy main"</span>
+<a id="rest_code_e69274fc73af4595b7daa07c005e21f0-4" name="rest_code_e69274fc73af4595b7daa07c005e21f0-4" href="#rest_code_e69274fc73af4595b7daa07c005e21f0-4"></a>  &gt;&gt; /etc/apt/sources.list.d/llvm-clang.list
+</pre></div>
+<ol class="arabic simple" start="3">
+<li><p>Get clang package</p></li>
+</ol>
+<div class="code"><pre class="code bash"><a id="rest_code_bef8f80c0668488f8026c9d7a2729011-1" name="rest_code_bef8f80c0668488f8026c9d7a2729011-1" href="#rest_code_bef8f80c0668488f8026c9d7a2729011-1"></a>$ sudo apt-get install clang-3.5
+</pre></div>
+<p>When this article was written latest clang version was clang-3.5. This package
+contains scan-build script. Now we are ready to analyze our sources.</p>
+</section><section id="code-analysis"><h5>Code analysis</h5>
+<p>Code analysis is easy with scan-build:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_6c191da86e0f47e9ba038061c03f9a71-1" name="rest_code_6c191da86e0f47e9ba038061c03f9a71-1" href="#rest_code_6c191da86e0f47e9ba038061c03f9a71-1"></a>$ scan-build g++ main.cpp
+</pre></div>
+<p>To demonstrate better of what can static analysis do I've set up a git
+<a class="reference external" href="https://github.com/povilasb-com/cpp-static-analysis">repo</a>
+with c++ project that has some sample bugs that scan-build might catch <a class="footnote-reference brackets" href="#f4" id="footnote-reference-5" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a>.</p>
+<p>Let's download the sample:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_9accaa3d42d84c0aa8447d599790f4dc-1" name="rest_code_9accaa3d42d84c0aa8447d599790f4dc-1" href="#rest_code_9accaa3d42d84c0aa8447d599790f4dc-1"></a>$ git clone https://github.com/povilasb-com/cpp-static-analysis
+</pre></div>
+<p>Now run the scan-build analyzer:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1" name="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1" href="#rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1"></a>$ <span class="nb">cd</span> cpp-static-analysis
+<a id="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2" name="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2" href="#rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2"></a>$ scan-build make
+</pre></div>
+<p>This should yield that some bugs were found:</p>
+<pre class="literal-block">scan-build: 6 bugs found.
+scan-build: Run 'scan-view /tmp/scan-build-2014-03-16-200244-31706-1'
+to examine bug reports.</pre>
+<p>To see the report in HTML format enter:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1" name="rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1" href="#rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1"></a>$ scan-view /tmp/scan-build-2014-03-16-200244-31706-1
+</pre></div>
+<p>You should see something like this:</p>
+<img alt="/images/scan_build_result.png" src="../../images/scan_build_result.png"><p class="rubric">References</p>
+<aside class="footnote-list brackets"><aside class="footnote brackets" id="f1" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-4">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://llvm.org/apt/">http://llvm.org/apt/</a></p>
+</aside><aside class="footnote brackets" id="f2" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-1">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://clang-analyzer.llvm.org/scan-build.html">http://clang-analyzer.llvm.org/scan-build.html</a></p>
+</aside><aside class="footnote brackets" id="f3" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-3">3</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://en.wikipedia.org/wiki/List_of_tools_for_static_code_analysis">http://en.wikipedia.org/wiki/List_of_tools_for_static_code_analysis</a></p>
+</aside><aside class="footnote brackets" id="f4" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-5">4</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://github.com/povilasb-com/cpp-static-analysis">https://github.com/povilasb-com/cpp-static-analysis</a></p>
+</aside><aside class="footnote brackets" id="f5" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-2">5</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://github.com/facebook/flint">https://github.com/facebook/flint</a></p>
+</aside></aside></section></section></section></section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/cpp/" rel="tag">cpp</a></li>
+            <li><a class="tag p-category" href="../../categories/qa/" rel="tag">qa</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../cpp-googletest-intro/" rel="prev" title="C++ unit tests with googletest">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../time-tracker-in-1day/" rel="next" title="How I made my own time tracking tool in 1 day">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

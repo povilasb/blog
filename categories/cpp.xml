@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about cpp)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/cpp.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Boost dependency analyzer</title><link>http://blog.povilasb.com/posts/boost-deps-analyzer/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;section id="boost-dependency-analyzer"&gt;
+&lt;h2&gt;Boost Dependency Analyzer&lt;/h2&gt;
+&lt;p&gt;Boost dependency analyzer is a tool that analyzes and visualizes Boost library
+dependencies &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#f1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;. Unfortunately it has not been open sourced although
+available for download for free. There's Windows and Linux binaries available.&lt;/p&gt;
+&lt;img alt="/images/boost_deps_analyzer.png" src="http://blog.povilasb.com/images/boost_deps_analyzer.png"&gt;
+&lt;p&gt;Let's run this tool on Debian wheezy. We will need some version of Boost
+sources, QT 5 libraries and Boost dependency analyzer itself.&lt;/p&gt;
+&lt;section id="download-latest-boost"&gt;
+&lt;h3&gt;Download latest Boost&lt;/h3&gt;
+&lt;p&gt;By the time a wrote this document latest stable Boost version was 1.57.0.
+Download it from here &lt;a class="reference external" href="http://sourceforge.net/projects/boost/files/boost/1.57.0/"&gt;http://sourceforge.net/projects/boost/files/boost/1.57.0/&lt;/a&gt;
+and extract the archive.&lt;/p&gt;
+&lt;p&gt;Before continuing let's compile
+&lt;a class="reference external" href="http://www.boost.org/doc/libs/1_57_0/tools/bcp/doc/html/index.html"&gt;BCP&lt;/a&gt; tool.
+It will be used to detect the dependencies.
+In boost sources root directory run:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ./bootstrap.sh
+$ ./b2 tools/bcp&lt;/pre&gt;
+&lt;p&gt;BCP will be compiled to something like
+&lt;cite&gt;$(boost_roo_dir)/bin.v2/tools/bcp/gcc-4.7/release/link-static&lt;/cite&gt;.
+This is the directory where you'll locate BCP executable when running
+Boost dependency analyzer tool.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="download-boost-deps-analyzer"&gt;
+&lt;h3&gt;Download Boost deps analyzer&lt;/h3&gt;
+&lt;pre class="literal-block"&gt;$ cd /tmp
+$ wget http://www.meetingcpp.com/tl_files/tools/boostdependencygui_linux.zip
+$ unzipt -e boostdependencygui_linux.zip
+$ cd boostdependencygui
+$ chmod +x boostdependencygui&lt;/pre&gt;
+&lt;p&gt;Boost dependency analyzer comes with binary compiled for i386 architectures.
+Before running it we need to install dependency packages first which provide
+required libraries.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="prerequisites"&gt;
+&lt;h3&gt;Prerequisites&lt;/h3&gt;
+&lt;p&gt;Debian packages:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;libqt5widgets5:i386&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;libqt5sql5:i386&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To install i386 packages we must add i386 to the dpkg architecture list:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ dpkg --add-architecture i386
+$ sudo apt-get update&lt;/pre&gt;
+&lt;p&gt;Now we can install i386 packages:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ sudo apt-get install libqt5widgets5:i386 libqt5sql5:i386&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="running-the-analyzer"&gt;
+&lt;h3&gt;Running the analyzer&lt;/h3&gt;
+&lt;p&gt;Boost dependency analyzer comes with some compiled libraries. Unfortunately
+it fails to load them. Let's patch LD_LIBRARY_PATH:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ export LD_LIBRARY_PATH=/tmp/boostdependencygui&lt;/pre&gt;
+&lt;p&gt;Also those libraries have different names than the executable expects. Let's
+create symlinks to fix this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ln -s libGraphLayout.so.1.0.0 libGraphLayout.so.1
+$ ln -s libProcessSinkLib.so.1.0.0 libProcessSinkLib.so.1&lt;/pre&gt;
+&lt;p&gt;Now we should be able to run the analyzer tool:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd /tmp/boostdependencygui
+$ ./boostdependencygui&lt;/pre&gt;
+&lt;p&gt;From GUI menu select Dependencies-&amp;gt;Read dependencies, locate directory
+where you've extracted Boost libraries archive and press Open. Then locate
+where you've compiled BCP tool. After this analyzer should start processing,
+when it's done you can view the dependencies graph &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#f2" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.meetingcpp.com/index.php/br/items/boost-dependency-analyzer.html"&gt;http://www.meetingcpp.com/index.php/br/items/boost-dependency-analyzer.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#footnote-reference-2"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.youtube.com/watch?v=4yZG8gbw0sQ#t=10"&gt;https://www.youtube.com/watch?v=4yZG8gbw0sQ#t=10&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>boost</category><category>cpp</category><guid>http://blog.povilasb.com/posts/boost-deps-analyzer/</guid><pubDate>Sun, 30 Nov 2014 11:34:00 GMT</pubDate></item><item><title>C++ code coverage by tests</title><link>http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;section id="code-coverage-by-tests"&gt;
+&lt;h2&gt;Code coverage by tests&lt;/h2&gt;
+&lt;p&gt;We will continue on unit testing the code. But this time I'll show you how to
+check which part of code is covered by tests and which is not. Such
+information becomes useful when analyzing how well your code is tested. And
+the more code is tested, the more stable it can be considered.&lt;/p&gt;
+&lt;p&gt;In computer science, code coverage is a measure used to describe the degree to
+which the source code of a program is tested by a particular test suite. A
+program with high code coverage has been more thoroughly tested and has a
+lower chance of containing software bugs than a program with low code coverage.&lt;/p&gt;
+&lt;section id="setup-environment"&gt;
+&lt;h3&gt;Setup environment&lt;/h3&gt;
+&lt;p&gt;Prerequisites:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;GNU g++ compiler&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;lcov (&lt;a class="reference external" href="http://ltp.sourceforge.net/coverage/lcov.php"&gt;http://ltp.sourceforge.net/coverage/lcov.php&lt;/a&gt;)&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;CMake, make&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;These tools are all available on linux systems. On Debian:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_208645b0af7f413fac43a9b8e30add54-1" name="rest_code_208645b0af7f413fac43a9b8e30add54-1" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_208645b0af7f413fac43a9b8e30add54-1"&gt;&lt;/a&gt;$ sudo apt-get install g++ lcov cmake make
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="create-sample-project"&gt;
+&lt;h3&gt;Create sample project&lt;/h3&gt;
+&lt;p&gt;You can get a sample from github:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_9d318df350ed4352b51c18e173c633a0-1" name="rest_code_9d318df350ed4352b51c18e173c633a0-1" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_9d318df350ed4352b51c18e173c633a0-1"&gt;&lt;/a&gt;$ git clone https://github.com/povilasb-com/cpp-code-coverage.git
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We'll use the same project structure as in
+&lt;a class="reference external" href="http://blog.povilasb.com/posts/cpp-googletest-intro/"&gt;C++ unit tests with googletest&lt;/a&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;.
+|__ googletest-cmake
+  |__ lib
+  | |__ googletest -&amp;gt; ~/dev-tools/gtest-1.7.0
+  |__ src
+  | |__ lib1.cpp
+  | |__ lib1.hpp
+  |__ test
+  | |__ lib1_test.cpp
+  |__ CMakeLists.txt
+  |__ Makefile&lt;/pre&gt;
+&lt;p&gt;But this time i'm not going to describe how to create the project itself, you
+can get it from github.&lt;/p&gt;
+&lt;p&gt;Although there are few differences in build scripts compared to
+&lt;a class="reference external" href="http://blog.povilasb.com/posts/cpp-googletest-intro/"&gt;C++ unit tests with googletest&lt;/a&gt; that I would like to
+mention:&lt;/p&gt;
+&lt;section id="cmakelists-txt"&gt;
+&lt;h4&gt;CMakeLists.txt&lt;/h4&gt;
+&lt;div class="code"&gt;&lt;pre class="code cmake"&gt;&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-1" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-1" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-1"&gt;&lt;/a&gt;&lt;span class="nb"&gt;cmake_minimum_required&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;VERSION&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;2.6&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-2" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-2" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-2"&gt;&lt;/a&gt;&lt;span class="nb"&gt;project&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;Lib1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;CXX&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-3" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-3" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-3"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-4" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-4" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-4"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-5" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-5" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-5"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;CMAKE_CXX_FLAGS&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"-ggdb -fprofile-arcs -ftest-coverage"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-6" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-6" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-6"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;CMAKE_EXE_LINKER_FLAGS&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"-fprofile-arcs -ftest-coverage"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-7" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-7" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-7"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-8" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-8" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-8"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-9" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-9" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-9"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;SRC_DIR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${CMAKE_CURRENT_SOURCE_DIR}/src"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-10" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-10" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-10"&gt;&lt;/a&gt;&lt;span class="nb"&gt;include_directories&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${SRC_DIR}"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-11" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-11" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-11"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-12" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-12" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-12"&gt;&lt;/a&gt;&lt;span class="nb"&gt;file&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;GLOB_RECURSE&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;SRC_FILES&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${SRC_DIR}/*.cpp"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-13" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-13" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-13"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-14" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-14" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-14"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-15" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-15" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-15"&gt;&lt;/a&gt;&lt;span class="c"&gt;# Compiles static lib that will be linked with tests.&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-16" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-16" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-16"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;LIB_NAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"lib1"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-17" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-17" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-17"&gt;&lt;/a&gt;&lt;span class="nb"&gt;add_library&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${LIB_NAME}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;STATIC&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;SRC_FILES&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-18" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-18" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-18"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-19" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-19" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-19"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-20" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-20" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-20"&gt;&lt;/a&gt;&lt;span class="c"&gt;# Include googletest.&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-21" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-21" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-21"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;GTEST_DIR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${CMAKE_CURRENT_SOURCE_DIR}/lib/googletest"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-22" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-22" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-22"&gt;&lt;/a&gt;&lt;span class="nb"&gt;add_subdirectory&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;GTEST_DIR&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-23" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-23" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-23"&gt;&lt;/a&gt;&lt;span class="nb"&gt;include_directories&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${GTEST_DIR}/include"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-24" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-24" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-24"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-25" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-25" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-25"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-26" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-26" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-26"&gt;&lt;/a&gt;&lt;span class="c"&gt;# Build tests executable.&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-27" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-27" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-27"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;TEST_EXEC&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${LIB_NAME}_test"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-28" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-28" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-28"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;TEST_SRC_DIR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${CMAKE_CURRENT_SOURCE_DIR}/test"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-29" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-29" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-29"&gt;&lt;/a&gt;&lt;span class="nb"&gt;file&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;GLOB_RECURSE&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;TEST_SRC_FILES&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${TEST_SRC_DIR}/*.cpp"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-30" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-30" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-30"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-31" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-31" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-31"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-32" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-32" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-32"&gt;&lt;/a&gt;&lt;span class="nb"&gt;add_executable&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${TEST_EXEC}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;TEST_SRC_FILES&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c6eb48c8f39b465d86718c9f33ecf658-33" name="rest_code_c6eb48c8f39b465d86718c9f33ecf658-33" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_c6eb48c8f39b465d86718c9f33ecf658-33"&gt;&lt;/a&gt;&lt;span class="nb"&gt;target_link_libraries&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${TEST_EXEC}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${LIB_NAME}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"gtest"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"gtest_main"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This CMake sets specific compiler (CMAKE_CXX_FLAGS) and linker
+(CMAKE_EXE_LINKER_FLAGS) flags "-fprofile-arcs" and "-ftest-coverage".&lt;/p&gt;
+&lt;p&gt;When these flags are set, compiler injects profiling code that collects data
+about program execution: e.g. which line how much times was executed.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="makefile"&gt;
+&lt;h4&gt;Makefile&lt;/h4&gt;
+&lt;div class="code"&gt;&lt;pre class="code make"&gt;&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-1" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-1" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-1"&gt;&lt;/a&gt;&lt;span class="nv"&gt;BUILD_DIR&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; build
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-2" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-2" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-3" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-3" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-3"&gt;&lt;/a&gt;&lt;span class="nf"&gt;all&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt;-&lt;span class="n"&gt;run&lt;/span&gt; &lt;span class="n"&gt;coverage&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-4" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-4" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-4"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-5" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-5" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-5"&gt;&lt;/a&gt;&lt;span class="nf"&gt;test&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="k"&gt;$(&lt;/span&gt;&lt;span class="nv"&gt;BUILD_DIR&lt;/span&gt;&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-6" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-6" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-6"&gt;&lt;/a&gt;        &lt;span class="nb"&gt;cd&lt;/span&gt; &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; cmake &lt;span class="k"&gt;$(&lt;/span&gt;CURDIR&lt;span class="k"&gt;)&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; make
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-7" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-7" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-7"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-8" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-8" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-8"&gt;&lt;/a&gt;&lt;span class="nf"&gt;test-run&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-9" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-9" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-9"&gt;&lt;/a&gt;        &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;/lib1_test
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-10" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-10" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-10"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-11" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-11" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-11"&gt;&lt;/a&gt;&lt;span class="nf"&gt;coverage&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-12" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-12" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-12"&gt;&lt;/a&gt;        lcov --capture --directory &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt; &lt;span class="se"&gt;\&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-13" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-13" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-13"&gt;&lt;/a&gt;                --output-file &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;/coverage.info
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-14" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-14" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-14"&gt;&lt;/a&gt;        genhtml &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;/coverage.info &lt;span class="se"&gt;\&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-15" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-15" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-15"&gt;&lt;/a&gt;                --output-directory &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;/coverage-report
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-16" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-16" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-16"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-17" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-17" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-17"&gt;&lt;/a&gt;&lt;span class="nf"&gt;$(BUILD_DIR)&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-18" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-18" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-18"&gt;&lt;/a&gt;        mkdir -p &lt;span class="nv"&gt;$@&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-19" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-19" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-19"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-20" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-20" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-20"&gt;&lt;/a&gt;&lt;span class="nf"&gt;clean&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-21" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-21" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-21"&gt;&lt;/a&gt;        rm -rf &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-22" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-22" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-22"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d89a6da5e3554bcfa0860dcea8666339-23" name="rest_code_d89a6da5e3554bcfa0860dcea8666339-23" href="http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/#rest_code_d89a6da5e3554bcfa0860dcea8666339-23"&gt;&lt;/a&gt;&lt;span class="nf"&gt;.PHONY&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;all&lt;/span&gt; &lt;span class="n"&gt;cmake&lt;/span&gt; &lt;span class="n"&gt;clean&lt;/span&gt; &lt;span class="n"&gt;coverage&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt;-&lt;span class="n"&gt;run&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This Makefile compared to unit test project Makefile contains target "coverage".
+This target runs lcov command that collects coverage data and generates HTML
+output.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="compile-run-tests-and-build-coverage-report"&gt;
+&lt;h3&gt;Compile, run tests and build coverage report&lt;/h3&gt;
+&lt;p&gt;All thsese steps are programmed in Makefile script, so simply invoke "make".&lt;/p&gt;
+&lt;p&gt;As a result it will&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;build tests in build directory;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;run tests executable;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;this executable will generate *.gcda and *.gcno files, which contain code
+execution information. Do not worry about these files, lcov tool will take
+care of them for us.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;And finally it will run lcov tool that locates and
+parses execution data automatically for us and creates html output.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You can see the results in
+&lt;a class="reference external" href="http://blog.povilasb.com/posts/_static/samples/cpp/code-coverage/index.html"&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="analysis-report"&gt;
+&lt;h3&gt;Analysis report&lt;/h3&gt;
+&lt;img alt="/images/lcov_main.png" class="align-center" src="http://blog.povilasb.com/images/lcov_main.png" style="width: 100%;"&gt;
+&lt;p&gt;In our sample code coverage by tests report is built in
+"./build/coverage-report". This directory contains "index.html". Simply open it
+in your web browser and you should be all set.&lt;/p&gt;
+&lt;p&gt;Do not worry if you see a lot of source files indicated by red color. This
+actually means that only a small part of this code was executed. But mostly
+these files are c++ standard libraries.&lt;/p&gt;
+&lt;p&gt;Simply navigate to src/lib1.cpp - this is the source file we were testing and
+we are interested in how many lines of this file our tests executed.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="analyzing-our-library-sources"&gt;
+&lt;h3&gt;Analyzing our library sources&lt;/h3&gt;
+&lt;img alt="/images/lcov_lib1.png" class="align-center" src="http://blog.povilasb.com/images/lcov_lib1.png" style="width: 100%;"&gt;
+&lt;p&gt;Analyzing further you'll see that the situation is not that bad.&lt;/p&gt;
+&lt;p&gt;Our sample tests cover 66% of lib1.cpp code. And this report show which lines
+in code were executed and which were not. So based on these results you can
+supplement your test cases.&lt;/p&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://gcc.gnu.org/onlinedocs/gcc/Gcov.html"&gt;http://gcc.gnu.org/onlinedocs/gcc/Gcov.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://ltp.sourceforge.net/coverage/lcov.php"&gt;http://ltp.sourceforge.net/coverage/lcov.php&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>cpp</category><category>testing</category><guid>http://blog.povilasb.com/posts/cpp-code-coverage-by-tests/</guid><pubDate>Tue, 04 Nov 2014 23:52:00 GMT</pubDate></item><item><title>Static C++ code analysis</title><link>http://blog.povilasb.com/posts/cpp-static-analysis/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;section id="static-code-analysis"&gt;
+&lt;h2&gt;Static code analysis&lt;/h2&gt;
+&lt;p&gt;Static code analysis is the process of detecting errors and defects in
+software's source code. Static analysis can be viewed as an automated code
+review process.&lt;/p&gt;
+&lt;section id="tools"&gt;
+&lt;h3&gt;Tools&lt;/h3&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;scan-build from LLVM project &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f2" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Cppcheck&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Flint &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f5" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;5&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Many more &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f3" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;section id="scan-build"&gt;
+&lt;h4&gt;scan-build&lt;/h4&gt;
+&lt;p&gt;Let's see how to analyze c++ code with scan-build.
+Again I will be using Debian 7 and cmake to build my c++ programs.&lt;/p&gt;
+&lt;section id="get-the-clang-package"&gt;
+&lt;h5&gt;Get the clang package&lt;/h5&gt;
+&lt;p&gt;LLVM provides scan-build in a debian package &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f1" id="footnote-reference-4" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;Add the apt key of LLVM repository&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1" name="rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1"&gt;&lt;/a&gt;$ wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key&lt;span class="p"&gt;|&lt;/span&gt;sudo apt-key add -
+&lt;/pre&gt;&lt;/div&gt;
+&lt;ol class="arabic simple" start="2"&gt;
+&lt;li&gt;&lt;p&gt;Add the LLVM repos to apt sources directory&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-1" name="rest_code_e69274fc73af4595b7daa07c005e21f0-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-1"&gt;&lt;/a&gt;$ sudo &lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;"deb http://llvm.org/apt/wheezy/ llvm-toolchain-wheezy main"&lt;/span&gt;
+&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-2" name="rest_code_e69274fc73af4595b7daa07c005e21f0-2" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-2"&gt;&lt;/a&gt;  &amp;gt; /etc/apt/sources.list.d/llvm-clang.list
+&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-3" name="rest_code_e69274fc73af4595b7daa07c005e21f0-3" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-3"&gt;&lt;/a&gt;$ sudo &lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;"deb-src http://llvm.org/apt/wheezy/ llvm-toolchain-wheezy main"&lt;/span&gt;
+&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-4" name="rest_code_e69274fc73af4595b7daa07c005e21f0-4" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-4"&gt;&lt;/a&gt;  &amp;gt;&amp;gt; /etc/apt/sources.list.d/llvm-clang.list
+&lt;/pre&gt;&lt;/div&gt;
+&lt;ol class="arabic simple" start="3"&gt;
+&lt;li&gt;&lt;p&gt;Get clang package&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_bef8f80c0668488f8026c9d7a2729011-1" name="rest_code_bef8f80c0668488f8026c9d7a2729011-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_bef8f80c0668488f8026c9d7a2729011-1"&gt;&lt;/a&gt;$ sudo apt-get install clang-3.5
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;When this article was written latest clang version was clang-3.5. This package
+contains scan-build script. Now we are ready to analyze our sources.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="code-analysis"&gt;
+&lt;h5&gt;Code analysis&lt;/h5&gt;
+&lt;p&gt;Code analysis is easy with scan-build:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_6c191da86e0f47e9ba038061c03f9a71-1" name="rest_code_6c191da86e0f47e9ba038061c03f9a71-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_6c191da86e0f47e9ba038061c03f9a71-1"&gt;&lt;/a&gt;$ scan-build g++ main.cpp
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To demonstrate better of what can static analysis do I've set up a git
+&lt;a class="reference external" href="https://github.com/povilasb-com/cpp-static-analysis"&gt;repo&lt;/a&gt;
+with c++ project that has some sample bugs that scan-build might catch &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f4" id="footnote-reference-5" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;4&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Let's download the sample:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_9accaa3d42d84c0aa8447d599790f4dc-1" name="rest_code_9accaa3d42d84c0aa8447d599790f4dc-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_9accaa3d42d84c0aa8447d599790f4dc-1"&gt;&lt;/a&gt;$ git clone https://github.com/povilasb-com/cpp-static-analysis
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now run the scan-build analyzer:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1" name="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1"&gt;&lt;/a&gt;$ &lt;span class="nb"&gt;cd&lt;/span&gt; cpp-static-analysis
+&lt;a id="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2" name="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2"&gt;&lt;/a&gt;$ scan-build make
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This should yield that some bugs were found:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;scan-build: 6 bugs found.
+scan-build: Run 'scan-view /tmp/scan-build-2014-03-16-200244-31706-1'
+to examine bug reports.&lt;/pre&gt;
+&lt;p&gt;To see the report in HTML format enter:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1" name="rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1"&gt;&lt;/a&gt;$ scan-view /tmp/scan-build-2014-03-16-200244-31706-1
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You should see something like this:&lt;/p&gt;
+&lt;img alt="/images/scan_build_result.png" src="http://blog.povilasb.com/images/scan_build_result.png"&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-4"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://llvm.org/apt/"&gt;http://llvm.org/apt/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-1"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://clang-analyzer.llvm.org/scan-build.html"&gt;http://clang-analyzer.llvm.org/scan-build.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-3"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://en.wikipedia.org/wiki/List_of_tools_for_static_code_analysis"&gt;http://en.wikipedia.org/wiki/List_of_tools_for_static_code_analysis&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f4" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-5"&gt;4&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/povilasb-com/cpp-static-analysis"&gt;https://github.com/povilasb-com/cpp-static-analysis&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f5" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-2"&gt;5&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/facebook/flint"&gt;https://github.com/facebook/flint&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>cpp</category><category>qa</category><guid>http://blog.povilasb.com/posts/cpp-static-analysis/</guid><pubDate>Sun, 16 Mar 2014 18:39:00 GMT</pubDate></item><item><title>C++ unit tests with googletest</title><link>http://blog.povilasb.com/posts/cpp-googletest-intro/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;section id="unit-tests-with-googletest"&gt;
+&lt;h2&gt;Unit tests with googletest&lt;/h2&gt;
+&lt;p&gt;Unit tests let programmer know that his software works as expected. If you i
+have ever done heavy development or you are planning to do so, you would
+definitely see the obvious advantages of unit testing your software:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;you can easily check if software works on different platforms;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;unit tests might replace or at least supplement the samples;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;you can assert if your code still works after refactoring;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;unit tests can also be used to test and track performance;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;tests can be run automatically and periodically;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;unit tests make you try module/library API before integrating it to the other
+code - this way design issues can be noticed sooner;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;unit tests inspire confidence;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;and many more advantages...&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;One of the many testing frameworks for C++ if googletest. Let's see how to
+write unit tests for your modules.&lt;/p&gt;
+&lt;section id="setup-environment"&gt;
+&lt;h3&gt;Setup environment&lt;/h3&gt;
+&lt;p&gt;We'll use googletest, CMake and debian 7.3 system. Get the prerequisites:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_c61a75f7f90146bca70b390fe0d3459b-1" name="rest_code_c61a75f7f90146bca70b390fe0d3459b-1" href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_c61a75f7f90146bca70b390fe0d3459b-1"&gt;&lt;/a&gt;$ sudo apt-get install cmake unzip
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Download the latest googletest version from
+&lt;a class="reference external" href="https://code.google.com/p/googletest/downloads/list"&gt;here&lt;/a&gt; (by the time I
+wrote this article it was v1.7.0).&lt;/p&gt;
+&lt;p&gt;Unpack the package:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_4995445cd60c49f799a00a55fe28f66d-1" name="rest_code_4995445cd60c49f799a00a55fe28f66d-1" href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_4995445cd60c49f799a00a55fe28f66d-1"&gt;&lt;/a&gt;$ unzip gtest-1.7.0.zip
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="create-sample-project"&gt;
+&lt;h3&gt;Create sample project&lt;/h3&gt;
+&lt;p&gt;You can get a sample from github:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_d12d2ade6913407cab7367f06817f6d5-1" name="rest_code_d12d2ade6913407cab7367f06817f6d5-1" href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d12d2ade6913407cab7367f06817f6d5-1"&gt;&lt;/a&gt;$ git clone https://github.com/povilasb-com/cpp-googletest-intro.git
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Sample project directory tree:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;.
+|__ googletest-cmake
+  |__ lib
+  | |__ googletest -&amp;gt; ~/dev-tools/gtest-1.7.0
+  |__ src
+  | |__ lib1.cpp
+  | |__ lib1.hpp
+  |__ test
+  | |__ lib1_test.cpp
+  |__ CMakeLists.txt
+  |__ Makefile&lt;/pre&gt;
+&lt;section id="create-directory-hierarchy"&gt;
+&lt;h4&gt;Create directory hierarchy&lt;/h4&gt;
+&lt;div class="code"&gt;&lt;table class="codetable"&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_776e0460eb2c45c18b766fe814875664-1"&gt;&lt;code data-line-number="1"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_776e0460eb2c45c18b766fe814875664-1" name="rest_code_776e0460eb2c45c18b766fe814875664-1"&gt;&lt;/a&gt;$ mkdir googletest-cmake
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_776e0460eb2c45c18b766fe814875664-2"&gt;&lt;code data-line-number="2"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_776e0460eb2c45c18b766fe814875664-2" name="rest_code_776e0460eb2c45c18b766fe814875664-2"&gt;&lt;/a&gt;$ &lt;span class="nb"&gt;cd&lt;/span&gt; googletest-cmake
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_776e0460eb2c45c18b766fe814875664-3"&gt;&lt;code data-line-number="3"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_776e0460eb2c45c18b766fe814875664-3" name="rest_code_776e0460eb2c45c18b766fe814875664-3"&gt;&lt;/a&gt;$ mkdir lib src &lt;span class="nb"&gt;test&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;section id="create-a-symbolic-link-to-google-testing-framework-directory"&gt;
+&lt;h4&gt;Create a symbolic link to google testing framework directory&lt;/h4&gt;
+&lt;p&gt;I have google test located in my home dir dev-tools/gtest-1.7.0, so:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_e2affab911004c8da139ed9d8a5d5e30-1" name="rest_code_e2affab911004c8da139ed9d8a5d5e30-1" href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_e2affab911004c8da139ed9d8a5d5e30-1"&gt;&lt;/a&gt;$ ln -s ~/dev-tools/gtest-1.7.0 lib/googletest
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="write-sample-functions-that-will-be-tested"&gt;
+&lt;h4&gt;Write sample functions that will be tested&lt;/h4&gt;
+&lt;p&gt;cpp-googletest-cmake/src/lib1.hpp:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;table class="codetable"&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-1"&gt;&lt;code data-line-number="1"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-1" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#ifndef _LIB1_H&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-2"&gt;&lt;code data-line-number="2"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-2" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#define _LIB1_H 1&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-3"&gt;&lt;code data-line-number="3"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-3" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-3"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-4"&gt;&lt;code data-line-number="4"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-4" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-4"&gt;&lt;/a&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n2&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-5"&gt;&lt;code data-line-number="5"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-5" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-5"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-6"&gt;&lt;code data-line-number="6"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-6" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-6"&gt;&lt;/a&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;mul&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n2&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-7"&gt;&lt;code data-line-number="7"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-7" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-7"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-8"&gt;&lt;code data-line-number="8"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-8" name="rest_code_6cc69d5a12ec4f85b1ec8c76ff97f568-8"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#endif&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;p&gt;cpp-googletest-cmake/src/lib1.cpp:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;table class="codetable"&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-1"&gt;&lt;code data-line-number=" 1"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-1" name="rest_code_510c937218564d2a952bed4f5827b41b-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;"lib1.hpp"&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-2"&gt;&lt;code data-line-number=" 2"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-2" name="rest_code_510c937218564d2a952bed4f5827b41b-2"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-3"&gt;&lt;code data-line-number=" 3"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-3" name="rest_code_510c937218564d2a952bed4f5827b41b-3"&gt;&lt;/a&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-4"&gt;&lt;code data-line-number=" 4"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-4" name="rest_code_510c937218564d2a952bed4f5827b41b-4"&gt;&lt;/a&gt;&lt;span class="nf"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n2&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-5"&gt;&lt;code data-line-number=" 5"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-5" name="rest_code_510c937218564d2a952bed4f5827b41b-5"&gt;&lt;/a&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-6"&gt;&lt;code data-line-number=" 6"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-6" name="rest_code_510c937218564d2a952bed4f5827b41b-6"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n2&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-7"&gt;&lt;code data-line-number=" 7"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-7" name="rest_code_510c937218564d2a952bed4f5827b41b-7"&gt;&lt;/a&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-8"&gt;&lt;code data-line-number=" 8"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-8" name="rest_code_510c937218564d2a952bed4f5827b41b-8"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-9"&gt;&lt;code data-line-number=" 9"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-9" name="rest_code_510c937218564d2a952bed4f5827b41b-9"&gt;&lt;/a&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-10"&gt;&lt;code data-line-number="10"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-10" name="rest_code_510c937218564d2a952bed4f5827b41b-10"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mul&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n2&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-11"&gt;&lt;code data-line-number="11"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-11" name="rest_code_510c937218564d2a952bed4f5827b41b-11"&gt;&lt;/a&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-12"&gt;&lt;code data-line-number="12"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-12" name="rest_code_510c937218564d2a952bed4f5827b41b-12"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;n2&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_510c937218564d2a952bed4f5827b41b-13"&gt;&lt;code data-line-number="13"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_510c937218564d2a952bed4f5827b41b-13" name="rest_code_510c937218564d2a952bed4f5827b41b-13"&gt;&lt;/a&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;section id="create-build-scripts"&gt;
+&lt;h4&gt;Create build scripts&lt;/h4&gt;
+&lt;p&gt;googletest-cmake/src/CMakeLists.txt:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;table class="codetable"&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-1"&gt;&lt;code data-line-number=" 1"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-1" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-1"&gt;&lt;/a&gt;&lt;span class="nb"&gt;cmake_minimum_required&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;VERSION&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;2.6&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-2"&gt;&lt;code data-line-number=" 2"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-2" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-2"&gt;&lt;/a&gt;&lt;span class="nb"&gt;project&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;Lib1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;CXX&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-3"&gt;&lt;code data-line-number=" 3"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-3" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-3"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-4"&gt;&lt;code data-line-number=" 4"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-4" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-4"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;CMAKE_CXX_FLAGS&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"-ggdb"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-5"&gt;&lt;code data-line-number=" 5"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-5" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-5"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-6"&gt;&lt;code data-line-number=" 6"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-6" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-6"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;SRC_DIR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${CMAKE_CURRENT_SOURCE_DIR}/src"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-7"&gt;&lt;code data-line-number=" 7"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-7" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-7"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-8"&gt;&lt;code data-line-number=" 8"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-8" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-8"&gt;&lt;/a&gt;&lt;span class="nb"&gt;include_directories&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${SRC_DIR}"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-9"&gt;&lt;code data-line-number=" 9"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-9" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-9"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-10"&gt;&lt;code data-line-number="10"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-10" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-10"&gt;&lt;/a&gt;&lt;span class="nb"&gt;file&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;GLOB_RECURSE&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;SRC_FILES&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${SRC_DIR}/*.cpp"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-11"&gt;&lt;code data-line-number="11"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-11" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-11"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-12"&gt;&lt;code data-line-number="12"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-12" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-12"&gt;&lt;/a&gt;&lt;span class="c"&gt;# Compiles static lib that will be linked with tests.&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-13"&gt;&lt;code data-line-number="13"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-13" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-13"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;LIB_NAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"lib1"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-14"&gt;&lt;code data-line-number="14"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-14" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-14"&gt;&lt;/a&gt;&lt;span class="nb"&gt;add_library&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${LIB_NAME}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;STATIC&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;SRC_FILES&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-15"&gt;&lt;code data-line-number="15"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-15" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-15"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-16"&gt;&lt;code data-line-number="16"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-16" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-16"&gt;&lt;/a&gt;&lt;span class="c"&gt;# Include googletest.&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-17"&gt;&lt;code data-line-number="17"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-17" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-17"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;GTEST_DIR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${CMAKE_CURRENT_SOURCE_DIR}/lib/googletest"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-18"&gt;&lt;code data-line-number="18"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-18" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-18"&gt;&lt;/a&gt;&lt;span class="nb"&gt;add_subdirectory&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;GTEST_DIR&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-19"&gt;&lt;code data-line-number="19"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-19" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-19"&gt;&lt;/a&gt;&lt;span class="nb"&gt;include_directories&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${GTEST_DIR}/include"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-20"&gt;&lt;code data-line-number="20"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-20" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-20"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-21"&gt;&lt;code data-line-number="21"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-21" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-21"&gt;&lt;/a&gt;&lt;span class="c"&gt;# Build tests executable.&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-22"&gt;&lt;code data-line-number="22"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-22" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-22"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;TEST_EXEC&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${LIB_NAME}_test"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-23"&gt;&lt;code data-line-number="23"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-23" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-23"&gt;&lt;/a&gt;&lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;TEST_SRC_DIR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${CMAKE_CURRENT_SOURCE_DIR}/test"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-24"&gt;&lt;code data-line-number="24"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-24" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-24"&gt;&lt;/a&gt;&lt;span class="nb"&gt;file&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;GLOB_RECURSE&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;TEST_SRC_FILES&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${TEST_SRC_DIR}/*.cpp"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-25"&gt;&lt;code data-line-number="25"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-25" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-25"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-26"&gt;&lt;code data-line-number="26"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-26" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-26"&gt;&lt;/a&gt;&lt;span class="nb"&gt;add_executable&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${TEST_EXEC}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;${&lt;/span&gt;&lt;span class="nv"&gt;TEST_SRC_FILES&lt;/span&gt;&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-27"&gt;&lt;code data-line-number="27"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-27" name="rest_code_8482a20e6a78422da6d6a1fa5f0f7aea-27"&gt;&lt;/a&gt;&lt;span class="nb"&gt;target_link_libraries&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"${TEST_EXEC}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"${LIB_NAME}"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"gtest"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;"gtest_main"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;p&gt;CMake does the main build process, but we also use a helper Makefile that
+runs cmake and the compiled tests executable.&lt;/p&gt;
+&lt;p&gt;googletes-cmake/src/Makefile:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;table class="codetable"&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-1"&gt;&lt;code data-line-number=" 1"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-1" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-1"&gt;&lt;/a&gt;&lt;span class="nv"&gt;BUILD_DIR&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; build
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-2"&gt;&lt;code data-line-number=" 2"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-2" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-2"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-3"&gt;&lt;code data-line-number=" 3"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-3" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-3"&gt;&lt;/a&gt;&lt;span class="nf"&gt;all&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt;-&lt;span class="n"&gt;run&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-4"&gt;&lt;code data-line-number=" 4"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-4" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-4"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-5"&gt;&lt;code data-line-number=" 5"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-5" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-5"&gt;&lt;/a&gt;&lt;span class="nf"&gt;test&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="k"&gt;$(&lt;/span&gt;&lt;span class="nv"&gt;BUILD_DIR&lt;/span&gt;&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-6"&gt;&lt;code data-line-number=" 6"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-6" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-6"&gt;&lt;/a&gt;        &lt;span class="nb"&gt;cd&lt;/span&gt; &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; cmake &lt;span class="k"&gt;$(&lt;/span&gt;CURDIR&lt;span class="k"&gt;)&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; make
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-7"&gt;&lt;code data-line-number=" 7"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-7" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-7"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-8"&gt;&lt;code data-line-number=" 8"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-8" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-8"&gt;&lt;/a&gt;&lt;span class="nf"&gt;test-run&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-9"&gt;&lt;code data-line-number=" 9"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-9" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-9"&gt;&lt;/a&gt;        &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;/lib1_test
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-10"&gt;&lt;code data-line-number="10"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-10" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-10"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-11"&gt;&lt;code data-line-number="11"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-11" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-11"&gt;&lt;/a&gt;&lt;span class="nf"&gt;$(BUILD_DIR)&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-12"&gt;&lt;code data-line-number="12"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-12" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-12"&gt;&lt;/a&gt;        mkdir -p &lt;span class="nv"&gt;$@&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-13"&gt;&lt;code data-line-number="13"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-13" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-13"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-14"&gt;&lt;code data-line-number="14"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-14" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-14"&gt;&lt;/a&gt;&lt;span class="nf"&gt;clean&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-15"&gt;&lt;code data-line-number="15"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-15" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-15"&gt;&lt;/a&gt;        rm -rf &lt;span class="k"&gt;$(&lt;/span&gt;BUILD_DIR&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-16"&gt;&lt;code data-line-number="16"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-16" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-16"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_9c4b5a1f71e34af68cfd043d9707ce97-17"&gt;&lt;code data-line-number="17"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-17" name="rest_code_9c4b5a1f71e34af68cfd043d9707ce97-17"&gt;&lt;/a&gt;&lt;span class="nf"&gt;.PHONY&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="n"&gt;all&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt; &lt;span class="n"&gt;test&lt;/span&gt;-&lt;span class="n"&gt;run&lt;/span&gt; &lt;span class="n"&gt;clean&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;section id="create-test-suite"&gt;
+&lt;h4&gt;Create test suite&lt;/h4&gt;
+&lt;p&gt;googletes-cmake/test/lib1_test.cpp:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;table class="codetable"&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-1"&gt;&lt;code data-line-number=" 1"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-1" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;gtest/gtest.h&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-2"&gt;&lt;code data-line-number=" 2"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-2" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-2"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-3"&gt;&lt;code data-line-number=" 3"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-3" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;"lib1.hpp"&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-4"&gt;&lt;code data-line-number=" 4"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-4" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-4"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-5"&gt;&lt;code data-line-number=" 5"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-5" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-5"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-6"&gt;&lt;code data-line-number=" 6"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-6" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-6"&gt;&lt;/a&gt;&lt;span class="n"&gt;TEST&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lib1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-7"&gt;&lt;code data-line-number=" 7"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-7" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-7"&gt;&lt;/a&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-8"&gt;&lt;code data-line-number=" 8"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-8" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-8"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;15&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-9"&gt;&lt;code data-line-number=" 9"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-9" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-9"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;ASSERT_TRUE&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;25&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-10"&gt;&lt;code data-line-number="10"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-10" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-10"&gt;&lt;/a&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-11"&gt;&lt;code data-line-number="11"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-11" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-11"&gt;&lt;/a&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-12"&gt;&lt;code data-line-number="12"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-12" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-12"&gt;&lt;/a&gt;&lt;span class="n"&gt;TEST&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lib1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;mul&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-13"&gt;&lt;code data-line-number="13"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-13" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-13"&gt;&lt;/a&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-14"&gt;&lt;code data-line-number="14"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-14" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-14"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;m&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;mul&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;15&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-15"&gt;&lt;code data-line-number="15"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-15" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-15"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;ASSERT_TRUE&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;m&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;150&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td class="linenos linenodiv"&gt;&lt;a href="http://blog.povilasb.com/posts/cpp-googletest-intro/#rest_code_d3c618ad02294673b1978eb07dd2e2cf-16"&gt;&lt;code data-line-number="16"&gt;&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;&lt;td class="code"&gt;&lt;code&gt;&lt;a id="rest_code_d3c618ad02294673b1978eb07dd2e2cf-16" name="rest_code_d3c618ad02294673b1978eb07dd2e2cf-16"&gt;&lt;/a&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;&lt;p&gt;This is the simplest form of the unit tests. It uses ASSERT_TRUE macro which
+checks if the specified expression is true. If it is not the test execution is
+terminated.&lt;/p&gt;
+&lt;p&gt;There are more convenience macros that you can use to assert expected values:
+&lt;a class="reference external" href="https://code.google.com/p/googletest/wiki/V1_7_Primer"&gt;https://code.google.com/p/googletest/wiki/V1_7_Primer&lt;/a&gt;.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="run-tests"&gt;
+&lt;h3&gt;Run tests&lt;/h3&gt;
+&lt;p&gt;Simply type &lt;em&gt;make&lt;/em&gt; in project directory. It invokes the helper Makefile that
+runs CMake which builds the tests executable and then Makefile runs this
+executable.&lt;/p&gt;
+&lt;section id="successfull-execution-results"&gt;
+&lt;h4&gt;Successfull execution results&lt;/h4&gt;
+&lt;img alt="/images/gtest_ok.png" src="http://blog.povilasb.com/images/gtest_ok.png"&gt;
+&lt;/section&gt;
+&lt;section id="example-of-tests-failure"&gt;
+&lt;h4&gt;Example of tests failure&lt;/h4&gt;
+&lt;img alt="/images/gtest_fail.png" src="http://blog.povilasb.com/images/gtest_fail.png"&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>cpp</category><category>testing</category><guid>http://blog.povilasb.com/posts/cpp-googletest-intro/</guid><pubDate>Sun, 02 Mar 2014 18:43:00 GMT</pubDate></item></channel></rss>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about development)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/development.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Silence does not mean stagnation</title><link>http://blog.povilasb.com/posts/silence-does-not-mean-stagnation/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;It's been over a year since I last wrote something on this blog. At the end of
+2016, when I returned from &lt;a class="reference external" href="https://recurse.com"&gt;the Recurse Center&lt;/a&gt;, I told
+myself I will be blogging about all new things I learn or experiment with -
+cause that's a good way to organize ones thoughts. Anyway, good habits
+require at least 2 things: will and time. I wouldn't say I don't have any of
+those but in the end I did not write anything for a whole year!&lt;/p&gt;
+&lt;p&gt;One of the major factors that kept me silent was my new job. At the end of
+October in 2017 I started working with &lt;a class="reference external" href="https://maidsafe.net"&gt;MaidSafe&lt;/a&gt; on a
+peer-to-peer privacy and security oriented &lt;a class="reference external" href="https://safenetwork.tech"&gt;data network&lt;/a&gt;. The peer-to-peer technology was totally new to
+me as a programmer. Also, most of our code is written in Rust which I didn't
+have professional experience with. On top of that, I started working remotely
+and that was another thing I've never done before. So, I've kept myself quite
+busy and couldn't find enough time to properly log some of my discoveries :)&lt;/p&gt;
+&lt;section id="work-at-maidsafe"&gt;
+&lt;h2&gt;Work at MaidSafe&lt;/h2&gt;
+&lt;p&gt;One of the nice things about working at MaidSafe is that everything is open
+source. You can even go and checkout out what I've been doing &lt;a class="reference external" href="https://github.com/povilasb"&gt;today&lt;/a&gt; :) At MaidSafe I'm mainly working on the p2p
+networking library called Crust which puts into use a number of other libraries.
+I will mention only those that I've made a fair amount of contributions.&lt;/p&gt;
+&lt;section id="p2p"&gt;
+&lt;h3&gt;p2p&lt;/h3&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/ustulation/p2p/"&gt;p2p&lt;/a&gt; is a Rust library that does TCP and
+UDP hole punching. Hole punching is a technique that makes direct connections
+possible between two peers that are behind routers with Network Address
+Translation. This topic deserves a blog post of it's own that I will probably
+write some time soon. p2p is a very important library for peer-to-peer
+connections and is integrated into Crust. I made sure the integration was
+smooth and was one of the library maintainers.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="tokio-utp"&gt;
+&lt;h3&gt;tokio-utp&lt;/h3&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/maidsafe/tokio_utp"&gt;tokio-utp&lt;/a&gt; is another Rust networking
+library. It implements uTP protocol in pure Rust and exposes Tokio/futures
+based API. uTP protocol adds reliability logic on top of UDP protocol. It also
+describes the expected congestion control mechanism that yields to other
+network traffic in the system. I took over the maintenance of this library from
+ex developers. I did a lot of investigation on how congestion control was
+implemented, I worked on graceful connection shutdown, improved test coverage
+and code quality in general.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="rust-libutp"&gt;
+&lt;h3&gt;rust-libutp&lt;/h3&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/maidsafe/tokio_utp"&gt;tokio-utp&lt;/a&gt; was written from scratch
+and at that time it wasn't as stable as people would like it to be. As a
+result, I wrote the wrappers for the libutp which is C implementation of uTP
+protocol. &lt;a class="reference external" href="https://github.com/bittorrent/libutp"&gt;libutp&lt;/a&gt; is the mainstream
+implementation and is supposed to be robust and stable. That was the first time
+I wrote C bindings for Rust, hence learned something new. I have to say it was
+quite easy: Rust has this tool &lt;a class="reference external" href="https://github.com/rust-lang-nursery/rust-bindgen"&gt;bindgen&lt;/a&gt; that automatically
+generates Rust wrappers for a given C header file. The generated wrappers are
+unsafe so I did have to provide safe API on top of. Anyway, work is still in
+progress there.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="crust"&gt;
+&lt;h3&gt;Crust&lt;/h3&gt;
+&lt;p&gt;Most of my time I spent working on &lt;a class="reference external" href="https://github.com/maidsafe/crust"&gt;Crust&lt;/a&gt;
+library. It's a peer-to-peer communications library written in Rust. It
+supports multiple transport protocols (TCP and uTP at this moment), encryption,
+hole punching, etc. I did some work to integrate tokio and futures crates into
+Crust, greatly expanded automated test suite, implemented examples, expanded
+documentation and maintained library overall quality.&lt;/p&gt;
+&lt;p&gt;I also did some minor changes to MaidSafe encryption libray
+&lt;a class="reference external" href="https://github.com/maidsafe/safe_crypto/commits?author=povilasb"&gt;safe_crypto&lt;/a&gt;
+and carried safe_crypto integration into Crust.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="netsim"&gt;
+&lt;h3&gt;netsim&lt;/h3&gt;
+&lt;p&gt;Testing peer-to-peer networking code is hard, especially the hole punching
+implementation. As a result my collegue &lt;a class="reference external" href="https://github.com/canndrew"&gt;Andrew&lt;/a&gt;
+created a library that simulates computer networks with Rust - &lt;a class="reference external" href="https://github.com/canndrew/netsim"&gt;netsim&lt;/a&gt;. It runs completely in memory and gives
+you a full control over the simulated network: you can construct hierarchical
+networks, exchange IP packets, introduce packet loss and latency, simulate misc
+network address translation behaviors, etc.
+I mostly tested the library from the user perspective and gave my feedback.
+In addition, I did some minor
+&lt;a class="reference external" href="https://github.com/canndrew/netsim/commits?author=povilasb"&gt;contributions&lt;/a&gt;
+and since this is such an amazing tool I did a couple of presentations at our
+local events in Lithuania: &lt;a class="reference external" href="https://2018.notrollsallowed.com/pranesimai/60"&gt;no trolls allowed 2018&lt;/a&gt; and &lt;a class="reference external" href="https://www.meetup.com/Rust-in-Vilnius/events/254403141/"&gt;Vilnius Rust meetup&lt;/a&gt; :)&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="open-source-projects"&gt;
+&lt;h2&gt;Open Source Projects&lt;/h2&gt;
+&lt;p&gt;Besides my daily job I usually tend to spend some time on my personal or
+other open source projects. A lot of times the work I do for the companies
+influences my interests after work too.&lt;/p&gt;
+&lt;p&gt;A year ago I did some UDP and TCP hole punching experiments using python.
+The code is &lt;a class="reference external" href="https://github.com/povilasb/hole-punching"&gt;here&lt;/a&gt;.
+I also wrote a command line utility to forward ports in your router:
+&lt;a class="reference external" href="https://github.com/povilasb/pyigd"&gt;https://github.com/povilasb/pyigd&lt;/a&gt; which I actively use to this day.&lt;/p&gt;
+&lt;p&gt;At MaidSafe I work with Rust on a daily basis where we use a lot of open source
+libraries. During the last year I did some small contributions to some of them.
+I added boolean matchers to rust hamcrest library:
+&lt;a class="reference external" href="https://github.com/ujh/hamcrest-rust/commits?author=povilasb"&gt;https://github.com/ujh/hamcrest-rust/commits?author=povilasb&lt;/a&gt; . Unfortunately,
+the development of hamcrest-rust got frozen. But then an active &lt;a class="reference external" href="https://github.com/Valloric/hamcrest2-rust"&gt;fork&lt;/a&gt; emerged which accepted a small
+&lt;a class="reference external" href="https://github.com/Valloric/hamcrest2-rust/pull/4"&gt;PR of mine&lt;/a&gt;. I made
+&lt;cite&gt;contains()&lt;/cite&gt; matcher generic which allowed it to accept single element or
+vector.  Hence &lt;cite&gt;assert_that!(vec![1, 2, 3], contains(2))&lt;/cite&gt; became possible.
+Another rust library I contributed to is &lt;a class="reference external" href="https://github.com/sbstp/rust-igd"&gt;rust-igd&lt;/a&gt; which implements &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol"&gt;IGD protocol&lt;/a&gt;. I added
+&lt;a class="reference external" href="https://github.com/sbstp/rust-igd/pull/33"&gt;an asyncronous use example&lt;/a&gt;.
+Finally, I made a tiny &lt;a class="reference external" href="https://github.com/cespare/vim-toml/pull/41"&gt;PR&lt;/a&gt;
+into &lt;a class="reference external" href="https://github.com/cespare/vim-toml"&gt;vim-toml&lt;/a&gt; which is &lt;a class="reference external" href="https://github.com/toml-lang/toml"&gt;TOML format&lt;/a&gt; highlighting for vim. Unfortunately the
+PR did not get merged yet.&lt;/p&gt;
+&lt;/section&gt;</description><category>development</category><guid>http://blog.povilasb.com/posts/silence-does-not-mean-stagnation/</guid><pubDate>Mon, 05 Nov 2018 19:48:02 GMT</pubDate></item></channel></rss>

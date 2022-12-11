@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about assembly)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/assembly.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>What I have learned from resurrecting my operating system</title><link>http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Back at school in 2011 when I was still studying software engineering,
+I implemented a &lt;a class="reference external" href="https://github.com/povilasb/simple-os"&gt;simple operating system&lt;/a&gt;
+for i386 architecture.  When I wrote it, I did not have too much experience
+with makefiles, automated tests, builds, etc. Thus the project does not look
+too nice.
+For a long time I was eager to refactor some parts, port to C++, maybe use
+llvm and some of nice C++ features to better organize the code.
+Fortunately, I wish I could use C++11 or above, maybe even implement 64bit
+support and run it on arm architecture :)&lt;/p&gt;
+&lt;p&gt;I just spent a week figuring out how to compile and run the OS.
+And eventually I've learned some new things. Some of it I knew, but forgot,
+some if it was completely new to me :)&lt;/p&gt;
+&lt;section id="qemu"&gt;
+&lt;h2&gt;QEMU&lt;/h2&gt;
+&lt;p&gt;When I was implementing the OS, I used &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Bochs"&gt;bochs&lt;/a&gt; to test it.
+But this time &lt;a class="reference external" href="http://www.qemu.org/"&gt;QEMU&lt;/a&gt; seemed more attractive to me.&lt;/p&gt;
+&lt;p&gt;I can run QEMU with floppy disk image:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ qemu-system-i386 -fda sos.img&lt;/pre&gt;
+&lt;p&gt;Alternatively I can tell QEMU to emulate usb disk:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ qemu-system-i386 -usb -usbdevice disk:sos.img
+$ qemu-system-i386 -usb -usbdevice host:$vendor_id:$product_id&lt;/pre&gt;
+&lt;p&gt;I've learned that if I press &lt;cite&gt;ctrl+alt+shift+2&lt;/cite&gt; when OS is running inside QEMU,
+it will open console which allows me to control the emulated machine.&lt;/p&gt;
+&lt;p&gt;I can dump physical memory at given address:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;xp /10xb 0x7E00&lt;/pre&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;10 - number of items to display&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;x - print numbers in hex format&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;b - item size is one byte&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I can scroll console with &lt;cite&gt;ctrl+page up/down&lt;/cite&gt;.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="assembly"&gt;
+&lt;h2&gt;Assembly&lt;/h2&gt;
+&lt;p&gt;My simple OS has a small handcrafter bootloader written in assembly language.
+I use &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Netwide_Assembler"&gt;nasm&lt;/a&gt; to produce
+machine code.&lt;/p&gt;
+&lt;p&gt;I can produce raw binaries with nasm:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ nasm -f bin boot.asm -o boot.bin&lt;/pre&gt;
+&lt;p&gt;To disassemble I use &lt;cite&gt;objdump&lt;/cite&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ objdump -D -b binary -m i386 -M intel boot.bin&lt;/pre&gt;
+&lt;p&gt;where:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;&lt;cite&gt;-D&lt;/cite&gt; means disassemble all segments&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;cite&gt;-b binary&lt;/cite&gt; specifies file format&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;cite&gt;-m i386&lt;/cite&gt; specifies architecture&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;cite&gt;-M intel&lt;/cite&gt; specifies assembly language syntax&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Also, it was new to me that nasm has &lt;a class="reference external" href="https://www.tortall.net/projects/yasm/manual/html/nasm-local-label.html"&gt;local labels&lt;/a&gt;.
+Meaning you can have multiple labels with the same name.
+Local labels must go after regular labels and start with a period:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code asm"&gt;&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-1" name="rest_code_914ecf071d5f4779b198b834c35b978a-1" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-1"&gt;&lt;/a&gt;&lt;span class="nf"&gt;label1&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="c1"&gt;; some code&lt;/span&gt;
+&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-2" name="rest_code_914ecf071d5f4779b198b834c35b978a-2" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-2"&gt;&lt;/a&gt;&lt;span class="na"&gt;.loop&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="c1"&gt;; some more code&lt;/span&gt;
+&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-3" name="rest_code_914ecf071d5f4779b198b834c35b978a-3" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-3"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nf"&gt;jne&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;.loop&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-4" name="rest_code_914ecf071d5f4779b198b834c35b978a-4" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-4"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nf"&gt;ret&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-5" name="rest_code_914ecf071d5f4779b198b834c35b978a-5" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-5"&gt;&lt;/a&gt;&lt;span class="nf"&gt;label2&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="c1"&gt;; some code&lt;/span&gt;
+&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-6" name="rest_code_914ecf071d5f4779b198b834c35b978a-6" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-6"&gt;&lt;/a&gt;&lt;span class="na"&gt;.loop&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="c1"&gt;; some more code&lt;/span&gt;
+&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-7" name="rest_code_914ecf071d5f4779b198b834c35b978a-7" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-7"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nf"&gt;jne&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;.loop&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_914ecf071d5f4779b198b834c35b978a-8" name="rest_code_914ecf071d5f4779b198b834c35b978a-8" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_914ecf071d5f4779b198b834c35b978a-8"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nf"&gt;ret&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="os-loading"&gt;
+&lt;h2&gt;OS loading&lt;/h2&gt;
+&lt;p&gt;When computer starts, BIOS loads the first sector (512 bytes) of a bootable
+device.
+My bootloader (at least first stage) has to fit into those 512 bytes.
+Then it is able to read some more data: other parts of bootloader or kernel.&lt;/p&gt;
+&lt;p&gt;BIOS provides basic functionality to read some data from floppy or USB disk.
+In real mode BIOS emulates USB as floppy. Thus reading from USB is identical
+to reading from floppy.&lt;/p&gt;
+&lt;p&gt;There are two functions to read data from disk:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;&lt;a class="reference external" href="https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH.3D02h:_Read_Sectors_From_Drive"&gt;int 0x13, ah=0x2&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;a class="reference external" href="https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH.3D42h:_Extended_Read_Sectors_From_Drive"&gt;int 0x13, ah=0x42&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The difference is that &lt;cite&gt;ah=0x2&lt;/cite&gt; is older and uses CHS (Cylinder, Head, Sector)
+addressing. Whereas &lt;cite&gt;ah=0x42&lt;/cite&gt; uses linear addressing.
+Personally, I prefer &lt;cite&gt;ah=0x42&lt;/cite&gt;, because it's more intuitive to me.
+And it's use looks more or less like this:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code asm"&gt;&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-1" name="rest_code_261e87cd926d4d9f950b5b42badf396c-1" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-1"&gt;&lt;/a&gt;&lt;span class="nf"&gt;boot_disk&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;db&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0x80&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;; disk number&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-2" name="rest_code_261e87cd926d4d9f950b5b42badf396c-2" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-2"&gt;&lt;/a&gt;&lt;span class="nl"&gt;dapack:&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-3" name="rest_code_261e87cd926d4d9f950b5b42badf396c-3" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-3"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nf"&gt;db&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0x10&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-4" name="rest_code_261e87cd926d4d9f950b5b42badf396c-4" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-4"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nf"&gt;db&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-5" name="rest_code_261e87cd926d4d9f950b5b42badf396c-5" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-5"&gt;&lt;/a&gt;&lt;span class="nl"&gt;.count:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;dw&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;; int 13 resets this to # of blocks actually read/written&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-6" name="rest_code_261e87cd926d4d9f950b5b42badf396c-6" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-6"&gt;&lt;/a&gt;&lt;span class="nl"&gt;.buf:&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nf"&gt;dw&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;; memory buffer destination address&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-7" name="rest_code_261e87cd926d4d9f950b5b42badf396c-7" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-7"&gt;&lt;/a&gt;&lt;span class="nl"&gt;.seg:&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nf"&gt;dw&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;; in memory page zero&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-8" name="rest_code_261e87cd926d4d9f950b5b42badf396c-8" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-8"&gt;&lt;/a&gt;&lt;span class="nl"&gt;.addr:&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nf"&gt;dq&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;; skip 1st disk sector which is bootloader, which is loaded by BIOS&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-9" name="rest_code_261e87cd926d4d9f950b5b42badf396c-9" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-9"&gt;&lt;/a&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-10" name="rest_code_261e87cd926d4d9f950b5b42badf396c-10" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-10"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;127&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-11" name="rest_code_261e87cd926d4d9f950b5b42badf396c-11" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-11"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="no"&gt;dapack.count&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ax&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-12" name="rest_code_261e87cd926d4d9f950b5b42badf396c-12" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-12"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0x7E00&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-13" name="rest_code_261e87cd926d4d9f950b5b42badf396c-13" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-13"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="no"&gt;dapack.buf&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ax&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-14" name="rest_code_261e87cd926d4d9f950b5b42badf396c-14" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-14"&gt;&lt;/a&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-15" name="rest_code_261e87cd926d4d9f950b5b42badf396c-15" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-15"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;dl&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="no"&gt;boot_disk&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-16" name="rest_code_261e87cd926d4d9f950b5b42badf396c-16" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-16"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;si&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;dapack&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-17" name="rest_code_261e87cd926d4d9f950b5b42badf396c-17" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-17"&gt;&lt;/a&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0x42&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_261e87cd926d4d9f950b5b42badf396c-18" name="rest_code_261e87cd926d4d9f950b5b42badf396c-18" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_261e87cd926d4d9f950b5b42badf396c-18"&gt;&lt;/a&gt;&lt;span class="nf"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0x13&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="memory-paging"&gt;
+&lt;h2&gt;Memory paging&lt;/h2&gt;
+&lt;p&gt;When I was finally able to boot the OS, all I saw was page faults.
+I had completely forgotten how i386 paging works, except that page size
+usually is 4096 bytes :)&lt;/p&gt;
+&lt;section id="mmu"&gt;
+&lt;h3&gt;MMU&lt;/h3&gt;
+&lt;p&gt;In protected mode MMU (Memory Management Unit) translates the virtual address
+the running process is trying to access into physical address. MMU consults
+CR3 register and two tables: page directory and page table:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;                               Page Tables                  Pages
+                             +--------------+           +--------------+
+                             |              |---------&amp;gt; |              |
+                             +--------------+           |              |
+                             |              |-----+     |              |
+                             +--------------+     |     |              |
+                      +----&amp;gt; |              |     |     |              |
+ Page Directory       |      +--------------+     |     +--------------+
++--------------+      |                           |
+|              |------+      +--------------+     |     +--------------+
++--------------+             |              |     +----&amp;gt;|              |
+|              |------+      +--------------+           |              |
++--------------+      |      |              |           |              |
+|              |      |      +--------------+           |              |
++--------------+      +----&amp;gt; |              |           |              |
+                             +--------------+           +--------------+&lt;/pre&gt;
+&lt;p&gt;I had completely forgotten about control registers.
+Basically &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Control_register#CR3"&gt;CR3&lt;/a&gt; is
+a 32bit register that holds the address of page directory.&lt;/p&gt;
+&lt;p&gt;MMU algorithm:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;page_directory_addr = CR3
+page_table_addr = page_directory_addr[virtual_addr[31:22]]
+page_addr = page_table[virtual_addr[21:12]]
+physical_addr = page_addr[virtual_addr[11:0]]&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="context-swithing"&gt;
+&lt;h3&gt;Context swithing&lt;/h3&gt;
+&lt;p&gt;When it was pretty much clear how paging works, it was easier to investigate
+page faults.
+After playing around for some time, it was clear that context switching
+was causing the page faults. So I started to refresh my knowledge how pages
+are refreshed for running processes.&lt;/p&gt;
+&lt;p&gt;Kernel holds physical addresses of every page a process owns. Virtual memory
+for every process starts a 0x0. So what task scheduler does, when it switches
+the processes, it alters the &lt;cite&gt;Page Tables&lt;/cite&gt; entries to point to new pages.
+Turns out everything was ok with this procedure.&lt;/p&gt;
+&lt;p&gt;The BUG was that, when new pages were linked, MMU would not start using
+them immediately because of &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Translation_lookaside_buffer"&gt;TLB&lt;/a&gt;.
+I did not know about TLB before, but basically it's a cache of virtual to
+physical address mappings.
+Flushing TLB is pretty easy. I only have to update CR3 register:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code c"&gt;&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-1" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-1" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-1"&gt;&lt;/a&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-2" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-2" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-2"&gt;&lt;/a&gt;&lt;span class="nf"&gt;set_page_directory&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;PageDirectory&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;page_dir&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-3" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-3" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-3"&gt;&lt;/a&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-4" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-4" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-4"&gt;&lt;/a&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;asm&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;volatile&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"mov %0, %%eax;"&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-5" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-5" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-5"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="s"&gt;"mov %%eax, %%cr3"&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-6" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-6" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-6"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;"r"&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;page_dir&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-7" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-7" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-7"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;"eax"&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-8" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-8" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-8"&gt;&lt;/a&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-9" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-9" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/#rest_code_08d8c68df2794e0fa0121a626058ca6d-9"&gt;&lt;/a&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;So, I updated OS task scheduler to update CR3 every time context switch
+happened. And that fixed the page faults.
+After that the OS ran smoothly, just like 6 years ago :)&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="summary"&gt;
+&lt;h2&gt;Summary&lt;/h2&gt;
+&lt;p&gt;I'm happy I spent 5 days on this. I've learned some QEMU, nasm, objdump
+features, refreshed my knowledge of i386 boot process and memory management.
+And now I have a working environment that empowers me to play with real
+devices, misc CPU instructions, test some OS design ideas, etc.&lt;/p&gt;
+&lt;/section&gt;</description><category>assembly</category><category>c</category><category>osdev</category><category>qemu</category><guid>http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/</guid><pubDate>Wed, 28 Jun 2017 12:30:37 GMT</pubDate></item></channel></rss>

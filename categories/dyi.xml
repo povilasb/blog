@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about dyi)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/dyi.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>How I made my own time tracking tool in 1 day</title><link>http://blog.povilasb.com/posts/time-tracker-in-1day/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;I was always interested in how long it takes me to do stuff. Especially when
+it comes to programming. It's like sports: you measure how well you perform
+and next time you try to do it better. Otherwise there's no point of doing
+something, if you're not improving, right?&lt;/p&gt;
+&lt;p&gt;Recently I've been attending
+&lt;a class="reference external" href="https://www.coursera.org/course/ml"&gt;Machine Learning&lt;/a&gt; course. Study load
+was estimated 5-7 hours/week. But everytime I was doing the assignments I
+felt like I was spending at least twice more than the estimation. Then I
+decided I need to measure my activities.&lt;/p&gt;
+&lt;p&gt;There are lot's of time tracking
+&lt;a class="reference external" href="http://en.wikipedia.org/wiki/Comparison_of_time_tracking_software"&gt;tools&lt;/a&gt;
+out there: free, non-free, desktop, mobile, web based, etc. Most of them are
+really hard to work with. You have to open a web site or a dialog
+box, fill forms, press buttons, etc. It requires me to use my
+mouse and do bunch of steps that decreases my performance and interrupts
+main tasks. Eventually the motivation to track my time perishes.&lt;/p&gt;
+&lt;section id="the-problem"&gt;
+&lt;h2&gt;The problem&lt;/h2&gt;
+&lt;p&gt;Best case scenario would be if my computer could automatically monitor my
+activities. Well unfortunately, most of the time it's too hard to interpret
+human and computer interaction as a higher level task. E.g. computers might
+not easily understand that browsing facebook means that I'm still doing my
+job - advertising my product. That's why I have to explicitly tell which tasks
+I'm working on.&lt;/p&gt;
+&lt;p&gt;My goal was to reduce the burden of this action - &lt;strong&gt;task tracking&lt;/strong&gt;. I would
+like to put as less effort as possible.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="solution"&gt;
+&lt;h2&gt;Solution&lt;/h2&gt;
+&lt;p&gt;To achieve my goals I have implemented my own time tracking tool which
+integrates into my operating systems environment. It's available on
+&lt;a class="reference external" href="https://github.com/povilasb/awesome-time-tracker"&gt;github&lt;/a&gt;. Where you can
+find the description how to setup it on your Awesome window manager.&lt;/p&gt;
+&lt;p&gt;Currently I'm using Debian OS and
+&lt;a class="reference external" href="http://awesome.naquadah.org/"&gt;Awesome window manager&lt;/a&gt; on top of it. Awesome
+is litteraly awesome. It allows me to forget that I ever needed a mouse :).&lt;/p&gt;
+&lt;section id="first-attempt"&gt;
+&lt;h3&gt;First attempt&lt;/h3&gt;
+&lt;p&gt;Starting new task is easy. I hit &lt;em&gt;ctrl+windows_key+a&lt;/em&gt; (&lt;em&gt;a&lt;/em&gt; stands for
+activity), and I get a prompt to enter the new task I'm working on:&lt;/p&gt;
+&lt;img alt="/images/awesome_time_tracker_prompt.png" src="http://blog.povilasb.com/images/awesome_time_tracker_prompt.png"&gt;
+&lt;p&gt;Once i hit &lt;em&gt;ENTER&lt;/em&gt; the task is marked as started. When I hit
+&lt;em&gt;ctrl+windows_key+s&lt;/em&gt; the task is stopped. Once task is stopped it is saved
+to text file (CSV format). So later I can import my tasks to Excel and plot
+some charts.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="second-shot"&gt;
+&lt;h3&gt;Second shot&lt;/h3&gt;
+&lt;p&gt;Everything is simple and working pretty well. Except for task reports. I hate
+to do Excel imports or read the task reports from text file. So eventually
+I used &lt;a class="reference external" href="http://qmonix.com"&gt;Qmonix&lt;/a&gt; monitoring and analytics platform.
+It provides me:&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;server that collects my tasks;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;client side libraries to send task data to server;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;and dashboard to visualise and overview my tasks.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;img alt="/images/qmonix_arch.png" src="http://blog.povilasb.com/images/qmonix_arch.png"&gt;
+&lt;p&gt;To be honest, it took me 33 minutes to integrate Qmonix to my time tracker.
+And after that I was able to get some nice charts without breaking a sweat.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="how-did-i-do-it"&gt;
+&lt;h3&gt;How did I do it?&lt;/h3&gt;
+&lt;p&gt;First of all I downloaded Qmonix server from &lt;a class="reference external" href="http://qmonix.com"&gt;http://qmonix.com&lt;/a&gt;. The zip archive
+has &lt;em&gt;qmonix-qemu.sh&lt;/em&gt; script that runs the server:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ./qmonix-qemu.sh&lt;/pre&gt;
+&lt;p&gt;After the server started I was able to see such window:&lt;/p&gt;
+&lt;img alt="/images/qmonix_vm_running.png" src="http://blog.povilasb.com/images/qmonix_vm_running.png"&gt;
+&lt;p&gt;Then I grabbed Qmonix &lt;a class="reference external" href="https://github.com/qmonix/client-lua"&gt;Lua library&lt;/a&gt;.
+Because Awesome WM is configurable with Lua. Then I edited my awesome time
+tracker to send tasks to Qmonix server rather than save them to text file.
+That's it :) - I was able to overview the time I spent on my tasks in Web
+browser (&lt;em&gt;http://localhost:8337/dashboard/index.html&lt;/em&gt;).&lt;/p&gt;
+&lt;p&gt;One nice thing is that now I'm able to host the server and send my task time
+data from any place: home and work.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="example"&gt;
+&lt;h2&gt;Example&lt;/h2&gt;
+&lt;p&gt;Ok, let's come back to the machine learning course. I used this awesome time
+tracker to see how much time it actually took me to do my course work.
+First of all I separated three different tasks:&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;wathing videos,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;answering quiz questions,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;and doing programming assignments.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Then I tracked each activity separately:&lt;/p&gt;
+&lt;img alt="/images/awesome_time_tracker_prompt.png" src="http://blog.povilasb.com/images/awesome_time_tracker_prompt.png"&gt;
+&lt;img alt="/images/awesome_time_tracker_prompt_3.png" src="http://blog.povilasb.com/images/awesome_time_tracker_prompt_3.png"&gt;
+&lt;img alt="/images/awesome_time_tracker_prompt_2.png" src="http://blog.povilasb.com/images/awesome_time_tracker_prompt_2.png"&gt;
+&lt;section id="time-report-review"&gt;
+&lt;h3&gt;Time report review&lt;/h3&gt;
+&lt;p&gt;It's time to take a look how much time I spent on machine learning during a
+single week. Let's revise that estimated course load was 5-7 hours/week, but
+I felt like I was spending way more time.&lt;/p&gt;
+&lt;p&gt;Let's see the total time spent on machine learning. I will create column chart
+that displays time spent on machine learning daily:&lt;/p&gt;
+&lt;img alt="/images/qmonix_query.png" src="http://blog.povilasb.com/images/qmonix_query.png"&gt;
+&lt;p&gt;As a result I get such chart:&lt;/p&gt;
+&lt;img alt="/images/qmonix_column_chart.png" src="http://blog.povilasb.com/images/qmonix_column_chart.png"&gt;
+&lt;p&gt;What it says it, that on march 1st I spent 10 000 seconds studying machine
+learning. Which is about 2.7 hours. So it's twice better than the estimated
+time :)&lt;/p&gt;
+&lt;p&gt;Now I wanted to see how much time each subtask (videos, quiz, programming)
+took separately:&lt;/p&gt;
+&lt;img alt="/images/qmonix_query_grouping_operator.png" src="http://blog.povilasb.com/images/qmonix_query_grouping_operator.png"&gt;
+&lt;img alt="/images/qmonix_pie_chart.png" src="http://blog.povilasb.com/images/qmonix_pie_chart.png"&gt;
+&lt;p&gt;Most of the time I spent on watching videos. Although, I expected to see that
+programming tasks are the most time consuming.&lt;/p&gt;
+&lt;p&gt;Also I measured my breaks. Which later I compared to the machine learning
+course work:&lt;/p&gt;
+&lt;img alt="/images/qmonix_settings_work_vs_break.png" src="http://blog.povilasb.com/images/qmonix_settings_work_vs_break.png"&gt;
+&lt;img alt="/images/qmonix_work_vs_break.png" src="http://blog.povilasb.com/images/qmonix_work_vs_break.png"&gt;
+&lt;p&gt;Now it was obvious why it felt like it was taking too much time. I spent more
+time on breaks than working on my tasks.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="to-sum-up"&gt;
+&lt;h2&gt;To sum up&lt;/h2&gt;
+&lt;p&gt;Obviously I need to work on my concentration :).&lt;/p&gt;
+&lt;/section&gt;</description><category>dyi</category><category>productivity</category><guid>http://blog.povilasb.com/posts/time-tracker-in-1day/</guid><pubDate>Fri, 09 May 2014 14:49:00 GMT</pubDate></item></channel></rss>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python asyncio vs nginx performance | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/python-asyncio-vs-nginx-performance/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../mnist-with-scikit-learn/" title="MNIST with scikit-learn" type="text/html">
+<link rel="next" href="../building-pypy-is-easy/" title="Building PyPy is easy" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Python asyncio vs nginx performance">
+<meta property="og:url" content="http://blog.povilasb.com/posts/python-asyncio-vs-nginx-performance/">
+<meta property="og:description" content="While I was playing with Python asyncio I got interested in how well
+it performs serving data over TLS compared to Nginx.
+So I implemented a small HTTPS server with asyncio:
+import asyncio
+import ssl
+">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-02-24T17:23:38+02:00">
+<meta property="article:tag" content="asyncio">
+<meta property="article:tag" content="python">
+<meta property="article:tag" content="tls">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Python asyncio vs nginx performance</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2017-02-24T17:23:38+02:00" itemprop="datePublished" title="2017-02-24 17:23">2017-02-24 17:23</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>While I was playing with Python asyncio I got interested in how well
+it performs serving data over TLS compared to Nginx.
+So I implemented a small HTTPS server with asyncio:</p>
+<div class="code"><pre class="code python"><a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-1" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-1" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-1"></a><span class="kn">import</span> <span class="nn">asyncio</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-2" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-2" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-2"></a><span class="kn">import</span> <span class="nn">ssl</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-3" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-3" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-3"></a><span class="kn">import</span> <span class="nn">random</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-4" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-4" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-4"></a><span class="kn">import</span> <span class="nn">string</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-5" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-5" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-5"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-6" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-6" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-6"></a><span class="kn">import</span> <span class="nn">uvloop</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-7" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-7" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-7"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-8" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-8" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-8"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-9" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-9" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-9"></a><span class="n">content_20k</span> <span class="o">=</span> <span class="s1">''</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">ascii_uppercase</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">digits</span><span class="p">)</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-10" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-10" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-10"></a>                      <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">))</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-11" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-11" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-11"></a><span class="n">resp_lines</span> <span class="o">=</span> <span class="p">[</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-12" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-12" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-12"></a>    <span class="s1">'HTTP/1.1 200 OK'</span><span class="p">,</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-13" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-13" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-13"></a>    <span class="s1">'Connection: close'</span><span class="p">,</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-14" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-14" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-14"></a>    <span class="s1">''</span><span class="p">,</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-15" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-15" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-15"></a>    <span class="s1">''</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-16" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-16" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-16"></a><span class="p">]</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-17" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-17" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-17"></a><span class="n">resp_20k</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="s1">'</span><span class="se">\r\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">resp_lines</span><span class="p">)</span> <span class="o">+</span> <span class="n">content_20k</span><span class="p">,</span> <span class="s1">'latin-1'</span><span class="p">)</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-18" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-18" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-18"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-19" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-19" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-19"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-20" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-20" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-20"></a><span class="k">class</span> <span class="nc">HttpServerProtocol</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-21" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-21" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-21"></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-22" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-22" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-22"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-23" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-23" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-23"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-24" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-24" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-24"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-25" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-25" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-25"></a>    <span class="k">def</span> <span class="nf">request_received</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-26" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-26" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-26"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">resp_20k</span><span class="p">))</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-27" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-27" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-27"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-28" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-28" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-28"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-29" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-29" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-29"></a>    <span class="k">def</span> <span class="nf">data_received</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-30" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-30" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-30"></a>        <span class="c1"># Let's assume request is complete.</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-31" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-31" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-31"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">request_received</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-32" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-32" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-32"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-33" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-33" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-33"></a>    <span class="k">def</span> <span class="nf">connection_made</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transport</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-34" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-34" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-34"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span> <span class="o">=</span> <span class="n">transport</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-35" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-35" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-35"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-36" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-36" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-36"></a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-37" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-37" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-37"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_transport</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-38" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-38" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-38"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-39" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-39" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-39"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">start_https_server</span><span class="p">(</span><span class="n">loop</span><span class="p">):</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-40" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-40" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-40"></a>    <span class="n">tls_ctx</span> <span class="o">=</span> <span class="n">make_tls_context</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-41" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-41" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-41"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">loop</span><span class="o">.</span><span class="n">create_server</span><span class="p">(</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-42" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-42" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-42"></a>        <span class="k">lambda</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sslproto</span><span class="o">.</span><span class="n">SSLProtocol</span><span class="p">(</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-43" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-43" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-43"></a>            <span class="n">loop</span><span class="p">,</span> <span class="n">HttpServerProtocol</span><span class="p">(),</span> <span class="n">tls_ctx</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">server_side</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-44" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-44" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-44"></a>        <span class="s1">'0.0.0.0'</span><span class="p">,</span> <span class="mi">8082</span><span class="p">,</span> <span class="n">backlog</span><span class="o">=</span><span class="mi">65535</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-45" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-45" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-45"></a>    <span class="p">)</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-46" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-46" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-46"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-47" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-47" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-47"></a><span class="k">def</span> <span class="nf">make_tls_context</span><span class="p">():</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-48" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-48" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-48"></a>    <span class="n">ctx</span> <span class="o">=</span> <span class="n">ssl</span><span class="o">.</span><span class="n">SSLContext</span><span class="p">(</span><span class="n">ssl</span><span class="o">.</span><span class="n">PROTOCOL_TLS</span><span class="p">)</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-49" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-49" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-49"></a>    <span class="n">ctx</span><span class="o">.</span><span class="n">load_cert_chain</span><span class="p">(</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-50" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-50" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-50"></a>        <span class="n">certfile</span><span class="o">=</span><span class="s1">'example.com.crt'</span><span class="p">,</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-51" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-51" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-51"></a>        <span class="n">keyfile</span><span class="o">=</span><span class="s1">'https.key.pem'</span><span class="p">,</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-52" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-52" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-52"></a>    <span class="p">)</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-53" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-53" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-53"></a>    <span class="k">return</span> <span class="n">ctx</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-54" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-54" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-54"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-55" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-55" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-55"></a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-56" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-56" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-56"></a>    <span class="n">asyncio</span><span class="o">.</span><span class="n">set_event_loop_policy</span><span class="p">(</span><span class="n">uvloop</span><span class="o">.</span><span class="n">EventLoopPolicy</span><span class="p">())</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-57" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-57" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-57"></a>    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">new_event_loop</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-58" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-58" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-58"></a>    <span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">start_https_server</span><span class="p">(</span><span class="n">loop</span><span class="p">))</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-59" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-59" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-59"></a>    <span class="n">loop</span><span class="o">.</span><span class="n">run_forever</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-60" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-60" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-60"></a>    <span class="n">loop</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-61" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-61" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-61"></a>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-62" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-62" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-62"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">'__main__'</span><span class="p">:</span>
+<a id="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-63" name="rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-63" href="#rest_code_b4b873f7c5d944adb93ffd4ddb4505a9-63"></a>    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+<p>All it does is simply serves a static 20k content over TLS.
+I configure nginx to do the same.</p>
+<p>Then I ran a small benchmark with <a class="reference external" href="http://github.com/povilasb/httpmeter">httpmeter</a>. I am doing one request per connection
+as I am mainly interested in TLS performance.
+Here's the results for asyncio based server:</p>
+<pre class="literal-block">$ httpmeter -c 1000 -n 3000 -H 'Connection: close' https://192.168.2.222:8082/
+Concurrency Level:        1000
+Completed Requests:       3000
+Requests Per Second:      544.186120 [#/sec] (mean)
+Request Durations:        [min: 0.147766, avg: 1.016474, max: 1.847824] seconds
+Document Length:          [min: 20480, avg: 20480.000000, max: 20480] bytes
+Status codes:
+        200 3000</pre>
+<p>And here's for nginx:</p>
+<pre class="literal-block">$ httpmeter -c 1000 -n 3000 -H 'Connection: close' https://192.168.2.222:8443/20k
+Concurrency Level:        1000
+Completed Requests:       3000
+Requests Per Second:      1210.957884 [#/sec] (mean)
+Request Durations:        [min: 0.068251, avg: 0.454704, max: 0.834079] seconds
+Document Length:          [min: 20480, avg: 20480.000000, max: 20480] bytes
+Status codes:
+        200 3000</pre>
+<p>Both nginx and python server loaded up to 100% single CPU core.</p>
+<p>Basically nginx performed 2x better than asyncio.</p>
+<p>I profiled the asyncio server:</p>
+<pre class="literal-block">$ pyenv/bin/python server.py
+     361637 function calls (361625 primitive calls) in 9.351 seconds
+
+Ordered by: internal time
+
+ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+ 9000    4.770    0.001    4.770    0.001 {method 'do_handshake' of '_ssl._SSLSocket' objects}
+    1    4.088    4.088    9.349    9.349 {method 'run_forever' of 'uvloop.loop.Loop' objects}
+15000    0.076    0.000    4.975    0.000 sslproto.py:169(feed_ssldata)
+ 3000    0.068    0.000    0.068    0.000 {method 'write' of '_ssl._SSLSocket' objects}
+ 9000    0.045    0.000    0.045    0.000 {method 'read' of '_ssl._SSLSocket' objects}
+12000    0.033    0.000    0.221    0.000 sslproto.py:624(_process_write_backlog)
+ 3000    0.024    0.000    0.025    0.000 sslproto.py:413(__init__)
+ 9000    0.018    0.000    5.107    0.001 sslproto.py:497(data_received)
+ 3000    0.017    0.000    0.035    0.000 sslproto.py:572(_on_handshake_complete)
+ 3000    0.015    0.000    0.015    0.000 {method '_wrap_bio' of '_ssl._SSLContext' objects}
+12000    0.013    0.000    0.013    0.000 {method 'read' of '_ssl.MemoryBIO' objects}
+ 3000    0.012    0.000    0.012    0.000 {method 'shutdown' of '_ssl._SSLSocket' objects}
+ 3000    0.012    0.000    0.091    0.000 sslproto.py:243(feed_appdata)
+ 9000    0.010    0.000    4.782    0.001 ssl.py:681(do_handshake)
+ 3000    0.009    0.000    0.019    0.000 sslproto.py:460(connection_made)
+12000    0.008    0.000    0.008    0.000 {method 'write' of 'uvloop.loop.UVStream' objects}
+ 6000    0.007    0.000    0.155    0.000 sslproto.py:555(_write_appdata)
+ 9000    0.007    0.000    0.007    0.000 {method 'write' of '_ssl.MemoryBIO' objects}
+ 3000    0.006    0.000    0.061    0.000 sslproto.py:118(do_handshake)
+ 3000    0.006    0.000    0.168    0.000 server.py:25(request_received)
+ 3000    0.006    0.000    0.008    0.000 sslproto.py:521(eof_received)
+48045    0.005    0.000    0.005    0.000 {built-in method builtins.len}
+ 3000    0.005    0.000    0.005    0.000 sslproto.py:68(__init__)
+ 3000    0.005    0.000    0.034    0.000 server.py:43(&lt;lambda&gt;)
+ 9000    0.005    0.000    0.050    0.000 ssl.py:618(read)
+ 9000    0.005    0.000    0.005    0.000 {method 'call_soon' of 'uvloop.loop.Loop' objects}
+15018    0.005    0.000    0.005    0.000 {built-in method builtins.getattr}
+ 3000    0.004    0.000    0.009    0.000 weakref.py:155(__setitem__)
+ 3000    0.004    0.000    0.030    0.000 sslproto.py:139(shutdown)
+ 3000    0.004    0.000    0.021    0.000 ssl.py:403(wrap_bio)
+ 3000    0.004    0.000    0.006    0.000 sslproto.py:471(connection_lost)
+ 3000    0.003    0.000    0.114    0.000 sslproto.py:379(write)
+ 3000    0.003    0.000    0.003    0.000 server.py:21(__init__)
+ 3000    0.003    0.000    0.005    0.000 sslproto.py:560(_start_handshake)
+ 3000    0.003    0.000    0.003    0.000 {method 'cipher' of '_ssl._SSLSocket' objects}
+ 3000    0.003    0.000    0.003    0.000 {method 'update' of 'dict' objects}
+15028    0.002    0.000    0.002    0.000 {method 'append' of 'list' objects}
+ 3000    0.002    0.000    0.004    0.000 ssl.py:638(getpeercert)
+ 3000    0.002    0.000    0.002    0.000 weakref.py:310(__init__)
+ 3000    0.002    0.000    0.002    0.000 ssl.py:577(__init__)
+ 3000    0.002    0.000    0.048    0.000 sslproto.py:317(close)
+ 3000    0.002    0.000    0.002    0.000 {method 'peer_certificate' of '_ssl._SSLSocket' objects}
+ 3000    0.002    0.000    0.014    0.000 ssl.py:690(unwrap)
+ 9000    0.002    0.000    0.002    0.000 sslproto.py:450(_wakeup_waiter)
+ 3000    0.002    0.000    0.046    0.000 sslproto.py:549(_start_shutdown)
+ 3000    0.001    0.000    0.003    0.000 weakref.py:305(__new__)
+ 3000    0.001    0.000    0.001    0.000 {method 'close' of 'uvloop.loop.UVBaseTransport' objects}
+ 3000    0.001    0.000    0.001    0.000 ssl.py:584(context)
+ 3000    0.001    0.000    0.170    0.000 server.py:29(data_received)
+ 1454    0.001    0.000    0.001    0.000 weakref.py:108(remove)
+ 3002    0.001    0.000    0.001    0.000 {built-in method __new__ of type object at 0x88d200}
+ 3000    0.001    0.000    0.069    0.000 ssl.py:630(write)
+ 3000    0.001    0.000    0.001    0.000 sslproto.py:297(__init__)
+ 9000    0.001    0.000    0.001    0.000 {method 'get_debug' of 'uvloop.loop.Loop' objects}
+ 3000    0.001    0.000    0.004    0.000 ssl.py:661(cipher)
+ 3000    0.001    0.000    0.002    0.000 ssl.py:672(compression)
+ 9000    0.001    0.000    0.001    0.000 {method 'append' of 'collections.deque' objects}
+ 3000    0.001    0.000    0.001    0.000 server.py:33(connection_made)
+ 3018    0.001    0.000    0.001    0.000 {built-in method builtins.hasattr}
+ 3022    0.001    0.000    0.001    0.000 {built-in method builtins.isinstance}
+ 3000    0.001    0.000    0.001    0.000 sslproto.py:95(ssl_object)
+ 3000    0.000    0.000    0.000    0.000 {method 'compression' of '_ssl._SSLSocket' objects}
+ 3000    0.000    0.000    0.000    0.000 protocols.py:94(eof_received)
+    2    0.000    0.000    0.000    0.000 sre_compile.py:250(_optimize_charset)
+ 3000    0.000    0.000    0.000    0.000 protocols.py:25(connection_lost)
+ 2397    0.000    0.000    0.000    0.000 sslproto.py:332(__del__)</pre>
+<p>It turns out that most of the time is spent doing TLS handshake.
+This is weird because I expected TLS to perform similar to nginx because
+python is only wrapping OpenSSL C implementation.</p>
+<p>One of the possible improvements that nginx could have is TLS session
+resumption.
+But it's not possible in this case because I used <cite>httpmeter</cite> which is
+implemented in python.
+And by the time I ran benchmarks, python TLS API did not support TLS sessions
+(<a class="reference external" href="https://bugs.python.org/issue19500">https://bugs.python.org/issue19500</a>).</p>
+<p>So I need to do more research to better understand nginx over python asyncio
+TLS performance.</p>
+    </div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/asyncio/" rel="tag">asyncio</a></li>
+            <li><a class="tag p-category" href="../../categories/python/" rel="tag">python</a></li>
+            <li><a class="tag p-category" href="../../categories/tls/" rel="tag">tls</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../mnist-with-scikit-learn/" rel="prev" title="MNIST with scikit-learn">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../building-pypy-is-easy/" rel="next" title="Building PyPy is easy">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

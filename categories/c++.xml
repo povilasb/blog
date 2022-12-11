@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about c++)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/c%2B%2B.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Using libc++ for OS kernel development</title><link>http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Lately I started porting &lt;a class="reference external" href="https://github.com/povilasb/simple-os"&gt;my hobby OS&lt;/a&gt;
+to C++.
+So far I've used C style error handling: function return value is interpreted
+as error code on failure. Unfortunately this is very inconvenient.
+One always has to look up the function documentation to figure out what
+values mean errors, etc. I think C++ exceptions are a superior mechanism.
+Unfortunately it's not so easy to get them working in kernel environment:
+&lt;a class="reference external" href="http://wiki.osdev.org/C%2B%2B_Exception_Support"&gt;http://wiki.osdev.org/C%2B%2B_Exception_Support&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Lately I have been learning Rust language. And it's error handling looks
+consistent and quite easy to use. One of the core classes is &lt;a class="reference external" href="https://doc.rust-lang.org/std/result/"&gt;Result&lt;/a&gt;. Basically it's a simple enum
+which holds heterogeneous values: one for return value on success, other for
+error values.
+Sounds like something like this could be easily implemented in C++ too.
+A quick google search revealed already existing library:
+&lt;a class="reference external" href="https://github.com/oktal/result"&gt;https://github.com/oktal/result&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;oktal/result&lt;/cite&gt; is a single file header only library. Thus it seemed like it
+would be easy to integrate into my kernel.
+The tricky thing is that it depends on couple of standard libraries:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_feb7cc8acb1b458db0080650b517011f-1" name="rest_code_feb7cc8acb1b458db0080650b517011f-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;iostream&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_feb7cc8acb1b458db0080650b517011f-2" name="rest_code_feb7cc8acb1b458db0080650b517011f-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;functional&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_feb7cc8acb1b458db0080650b517011f-3" name="rest_code_feb7cc8acb1b458db0080650b517011f-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;type_traits&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;So I thought why not porting the necessary libraries from libc++.&lt;/p&gt;
+&lt;section id="libc"&gt;
+&lt;h2&gt;libc++&lt;/h2&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://libcxx.llvm.org/"&gt;libc++&lt;/a&gt; is the implementation of C++ standard
+library. Usually it is used together with clang compiler.
+You can get latest libc++ sources from &lt;a class="reference external" href="https://github.com/llvm-mirror/libcxx"&gt;https://github.com/llvm-mirror/libcxx&lt;/a&gt;.
+So I thought I'll just copy/paste 2 libraries (&lt;cite&gt;functional&lt;/cite&gt; and &lt;cite&gt;type_traits&lt;/cite&gt;)
+to my own project and I'll remove the &lt;cite&gt;iostream&lt;/cite&gt; use, because it depends
+on I/O functions which currently are too different in my kernel...
+Turns out it's not so easy. &lt;cite&gt;result.h&lt;/cite&gt; includes graph roughly looks like this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;                       result.h
+                        |     |
+                        |     +-------+
+                        V             V
+                   functional    type_traits
+                    |   | |        |     |
+  +-----+---+---+---+   | +---+    |     |
+  V     |   |   |       V     V    V     V
+tuple   |   |   |  typeinfo  __config   cstddef --+
+        V   |   V                        |        |
+  exception | memory                     V        V
+            V                       __nullptr   stddef.h
+         utility&lt;/pre&gt;
+&lt;p&gt;Porting &lt;cite&gt;type_traits&lt;/cite&gt; was easy. I've just copied &lt;cite&gt;__nullptr&lt;/cite&gt;, &lt;cite&gt;cstddef&lt;/cite&gt; and
+&lt;cite&gt;__config&lt;/cite&gt; from libc++ and made small hacks in &lt;cite&gt;__config&lt;/cite&gt;.
+I took &lt;cite&gt;stddef.h&lt;/cite&gt; from GNU libc. Then &lt;cite&gt;type_traits&lt;/cite&gt; just worked.&lt;/p&gt;
+&lt;p&gt;But I faced more issues, when I started investigating &lt;cite&gt;functional&lt;/cite&gt;
+library. The problem is that it depends on exceptions which are disabled
+in my kernel environment.
+From this point it seemed just too much work to continue.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="system-predefined-macros"&gt;
+&lt;h2&gt;System predefined macros&lt;/h2&gt;
+&lt;p&gt;&lt;cite&gt;__config&lt;/cite&gt; in libc++ has such code:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-1" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-1"&gt;&lt;/a&gt;&lt;span class="c1"&gt;// Need to detect which libc we're using if we're on Linux.&lt;/span&gt;
+&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-2" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#if defined(__linux__)&lt;/span&gt;
+&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-3" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;features.h&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-4" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-4" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-4"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#endif &lt;/span&gt;&lt;span class="c1"&gt;// defined(__linux__)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;cite&gt;__linux__&lt;/cite&gt; is a predefined compiler macro which in this case enables
+&lt;cite&gt;features.h&lt;/cite&gt; include, if you're compiling a Linux program.
+Although, my OS kernel code is not meant to be run on Linux, g++ and clang
+still have this macro defined if I'm compiling on Linux.
+I can test predefined macros like this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ touch dummy.hh
+$ g++ -dM -E dummy.hh
+#define __unix__ 1
+#define __cpp_binary_literals 201304
+#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+#define __x86_64 1
+#define __linux 1
+#define __unix 1
+#define __UINT32_MAX__ 0xffffffffU
+#define __linux__ 1
+...&lt;/pre&gt;
+&lt;p&gt;Obviously this macro causes me problems: I don't have &lt;cite&gt;features.h&lt;/cite&gt; for my
+system. Thus I want to undefine &lt;cite&gt;__linux__&lt;/cite&gt;, &lt;cite&gt;__linux&lt;/cite&gt;, etc.&lt;/p&gt;
+&lt;section id="undefining-macros"&gt;
+&lt;h3&gt;Undefining macros&lt;/h3&gt;
+&lt;p&gt;I think superior method to solve macro issues is to create a cross
+compiler. E.g. Redox OS has taken this path with it's &lt;a class="reference external" href="https://github.com/redox-os/gcc/commit/37820fd5d9a7c9037a4a1be0816610cbd00ae59d#diff-dbff4af31a2e5a58eeb80832dead0b95R19"&gt;gcc port&lt;/a&gt;:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-1" name="rest_code_d84a7b536cf146ee98778c05d49ec249-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#define TARGET_OS_CPP_BUILTINS()      \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-2" name="rest_code_d84a7b536cf146ee98778c05d49ec249-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;   do {                                \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-3" name="rest_code_d84a7b536cf146ee98778c05d49ec249-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_define ("__redox__");      \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-4" name="rest_code_d84a7b536cf146ee98778c05d49ec249-4" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-4"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_define ("__unix__");      \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-5" name="rest_code_d84a7b536cf146ee98778c05d49ec249-5" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-5"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_assert ("system=redox");   \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-6" name="rest_code_d84a7b536cf146ee98778c05d49ec249-6" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-6"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_assert ("system=unix");   \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-7" name="rest_code_d84a7b536cf146ee98778c05d49ec249-7" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-7"&gt;&lt;/a&gt;&lt;span class="cp"&gt;     builtin_assert ("system=posix");   \&lt;/span&gt;
+&lt;a id="rest_code_d84a7b536cf146ee98778c05d49ec249-8" name="rest_code_d84a7b536cf146ee98778c05d49ec249-8" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-8"&gt;&lt;/a&gt;&lt;span class="cp"&gt;   } while(0);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Unfortunately, cross compiler is too much work for my project.&lt;/p&gt;
+&lt;p&gt;The other way to workaround macro issues is to use &lt;cite&gt;#undef&lt;/cite&gt; directive:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code cpp"&gt;&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#undef __linux__&lt;/span&gt;
+&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#if defined(__linux__)&lt;/span&gt;
+&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;features.h&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4"&gt;&lt;/a&gt;&lt;span class="cp"&gt;#endif &lt;/span&gt;&lt;span class="c1"&gt;// defined(__linux__)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This was the change I made to &lt;cite&gt;__config&lt;/cite&gt;.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="conclusions"&gt;
+&lt;h2&gt;Conclusions&lt;/h2&gt;
+&lt;p&gt;Using C++ standard library in kernel environment would definitely save me a
+lot of work. Unfortunately, it relies on exceptions and RTTI support.
+Thus porting libc++ to current kernel environment is just too much work.
+The other approach could be to reimplement standard library that does not use
+exceptions.&lt;/p&gt;
+&lt;p&gt;P.S. &lt;a class="reference external" href="https://github.com/electronicarts/EASTL"&gt;https://github.com/electronicarts/EASTL&lt;/a&gt; is STL implementation from
+Electronic Arts. It provides the ability to disable exceptions.
+Unfortunately, in such case no alternative error handling is provided.&lt;/p&gt;
+&lt;/section&gt;</description><category>c++</category><category>libc++</category><category>osdev</category><guid>http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/</guid><pubDate>Tue, 11 Jul 2017 09:38:11 GMT</pubDate></item></channel></rss>

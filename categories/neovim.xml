@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about neovim)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/neovim.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>First Neovim plugin in Python</title><link>http://blog.povilasb.com/posts/first-neovim-plugin-in-python/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;For some time I was (and still am) eager to write a Neovim plugin that
+would help me draw ASCII diagrams.&lt;/p&gt;
+&lt;p&gt;Neovim provides msgpack based RPC API which allows to communicate with
+editor over TCP/IP, Unix socket or pipe.
+Thus writing plugins in any language is possible.
+I used Python library implementing the API:
+&lt;a class="reference external" href="https://github.com/neovim/python-client"&gt;https://github.com/neovim/python-client&lt;/a&gt;.&lt;/p&gt;
+&lt;section id="controlling-neovim-instance"&gt;
+&lt;h2&gt;Controlling Neovim Instance&lt;/h2&gt;
+&lt;p&gt;There are couple of ways how we can connect Python based plugin with
+Neovim.
+The easiest way is to start Neovim with specified Unix socket:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ NVIM_LISTEN_ADDRESS=/tmp/nvim nvim&lt;/pre&gt;
+&lt;p&gt;Now we can connect to Neovim instance from Python:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-1" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-1" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_d8830a6df07b4f598bca7c1f707aa055-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;neovim&lt;/span&gt;
+&lt;a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-2" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-2" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_d8830a6df07b4f598bca7c1f707aa055-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-3" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-3" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_d8830a6df07b4f598bca7c1f707aa055-3"&gt;&lt;/a&gt;&lt;span class="n"&gt;vim&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;neovim&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;attach&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;'socket'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;'/tmp/nvim'&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-4" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-4" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_d8830a6df07b4f598bca7c1f707aa055-4"&gt;&lt;/a&gt;&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;vim&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;current&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;line&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-5" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-5" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_d8830a6df07b4f598bca7c1f707aa055-5"&gt;&lt;/a&gt;&lt;span class="n"&gt;vim&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;current&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;line&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;'New line'&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;section id="python-client-api"&gt;
+&lt;h2&gt;python-client API&lt;/h2&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/neovim/python-client"&gt;Neovim python&lt;/a&gt; API is not documented.
+While playing with it, I found some useful commands:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;vim.current.line
+    Currently selected line content.
+
+vim.eval('line(".")')
+    Currently selected line number. Line indexes start from 1.
+
+vim.eval('col(".")')
+    Currently selected column number. Column indexes start from 1.
+
+vim.current.buffer
+    Currently visible Neovim buffer.
+
+buffer.append(line: str, index: int=-1) -&amp;gt; None
+    Inserts specified line to the buffer.
+
+    index - index of a line after which new line will be inserted.
+        0 - inserts first line.
+        -1 - inserts last line.&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="configure-neovim-to-load-plugin"&gt;
+&lt;h2&gt;Configure Neovim to Load Plugin&lt;/h2&gt;
+&lt;p&gt;We can tell Neovim to automatically load our Python based plugin.
+First of all our plugin must expose implement required API:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-1" name="rest_code_c622f95745dd401cace41682f67378e0-1" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;neovim&lt;/span&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-2" name="rest_code_c622f95745dd401cace41682f67378e0-2" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-3" name="rest_code_c622f95745dd401cace41682f67378e0-3" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-3"&gt;&lt;/a&gt;&lt;span class="nd"&gt;@neovim&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;plugin&lt;/span&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-4" name="rest_code_c622f95745dd401cace41682f67378e0-4" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-4"&gt;&lt;/a&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;TestPlugin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;object&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-5" name="rest_code_c622f95745dd401cace41682f67378e0-5" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-5"&gt;&lt;/a&gt;    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="fm"&gt;__init__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;vim&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="kc"&gt;None&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-6" name="rest_code_c622f95745dd401cace41682f67378e0-6" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-6"&gt;&lt;/a&gt;        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;vim&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;vim&lt;/span&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-7" name="rest_code_c622f95745dd401cace41682f67378e0-7" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-7"&gt;&lt;/a&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-8" name="rest_code_c622f95745dd401cace41682f67378e0-8" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-8"&gt;&lt;/a&gt;    &lt;span class="nd"&gt;@neovim&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;command&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;'TestCommand'&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-9" name="rest_code_c622f95745dd401cace41682f67378e0-9" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-9"&gt;&lt;/a&gt;    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;alter_current_line&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="kc"&gt;None&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_c622f95745dd401cace41682f67378e0-10" name="rest_code_c622f95745dd401cace41682f67378e0-10" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/#rest_code_c622f95745dd401cace41682f67378e0-10"&gt;&lt;/a&gt;        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;vim&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;current&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;line&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;'New line'&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This test plugin defines new Neovim command which simply overwrites current
+line.&lt;/p&gt;
+&lt;p&gt;Now to make Neovim load the plugin:&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;Place it in &lt;cite&gt;~/.config/nvim/rplugin/python3&lt;/cite&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Open Neovim and issue &lt;cite&gt;:UpdateRemotePlugins&lt;/cite&gt; command.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Restart Neovim.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now select some line, press &lt;cite&gt;ESC&lt;/cite&gt; and type &lt;cite&gt;:TestCommand&lt;/cite&gt;.
+It should overwrite the line with "New Line".&lt;/p&gt;
+&lt;/section&gt;</description><category>neovim</category><category>neovim-plugin</category><guid>http://blog.povilasb.com/posts/first-neovim-plugin-in-python/</guid><pubDate>Sun, 16 Apr 2017 08:23:23 GMT</pubDate></item></channel></rss>

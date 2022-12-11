@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about qa)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/qa.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Static C++ code analysis</title><link>http://blog.povilasb.com/posts/cpp-static-analysis/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;section id="static-code-analysis"&gt;
+&lt;h2&gt;Static code analysis&lt;/h2&gt;
+&lt;p&gt;Static code analysis is the process of detecting errors and defects in
+software's source code. Static analysis can be viewed as an automated code
+review process.&lt;/p&gt;
+&lt;section id="tools"&gt;
+&lt;h3&gt;Tools&lt;/h3&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;scan-build from LLVM project &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f2" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Cppcheck&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Flint &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f5" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;5&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Many more &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f3" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;section id="scan-build"&gt;
+&lt;h4&gt;scan-build&lt;/h4&gt;
+&lt;p&gt;Let's see how to analyze c++ code with scan-build.
+Again I will be using Debian 7 and cmake to build my c++ programs.&lt;/p&gt;
+&lt;section id="get-the-clang-package"&gt;
+&lt;h5&gt;Get the clang package&lt;/h5&gt;
+&lt;p&gt;LLVM provides scan-build in a debian package &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f1" id="footnote-reference-4" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;Add the apt key of LLVM repository&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1" name="rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_ac8fb0e1549f4cdabfe2f1665cbd5094-1"&gt;&lt;/a&gt;$ wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key&lt;span class="p"&gt;|&lt;/span&gt;sudo apt-key add -
+&lt;/pre&gt;&lt;/div&gt;
+&lt;ol class="arabic simple" start="2"&gt;
+&lt;li&gt;&lt;p&gt;Add the LLVM repos to apt sources directory&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-1" name="rest_code_e69274fc73af4595b7daa07c005e21f0-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-1"&gt;&lt;/a&gt;$ sudo &lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;"deb http://llvm.org/apt/wheezy/ llvm-toolchain-wheezy main"&lt;/span&gt;
+&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-2" name="rest_code_e69274fc73af4595b7daa07c005e21f0-2" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-2"&gt;&lt;/a&gt;  &amp;gt; /etc/apt/sources.list.d/llvm-clang.list
+&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-3" name="rest_code_e69274fc73af4595b7daa07c005e21f0-3" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-3"&gt;&lt;/a&gt;$ sudo &lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;"deb-src http://llvm.org/apt/wheezy/ llvm-toolchain-wheezy main"&lt;/span&gt;
+&lt;a id="rest_code_e69274fc73af4595b7daa07c005e21f0-4" name="rest_code_e69274fc73af4595b7daa07c005e21f0-4" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_e69274fc73af4595b7daa07c005e21f0-4"&gt;&lt;/a&gt;  &amp;gt;&amp;gt; /etc/apt/sources.list.d/llvm-clang.list
+&lt;/pre&gt;&lt;/div&gt;
+&lt;ol class="arabic simple" start="3"&gt;
+&lt;li&gt;&lt;p&gt;Get clang package&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_bef8f80c0668488f8026c9d7a2729011-1" name="rest_code_bef8f80c0668488f8026c9d7a2729011-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_bef8f80c0668488f8026c9d7a2729011-1"&gt;&lt;/a&gt;$ sudo apt-get install clang-3.5
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;When this article was written latest clang version was clang-3.5. This package
+contains scan-build script. Now we are ready to analyze our sources.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="code-analysis"&gt;
+&lt;h5&gt;Code analysis&lt;/h5&gt;
+&lt;p&gt;Code analysis is easy with scan-build:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_6c191da86e0f47e9ba038061c03f9a71-1" name="rest_code_6c191da86e0f47e9ba038061c03f9a71-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_6c191da86e0f47e9ba038061c03f9a71-1"&gt;&lt;/a&gt;$ scan-build g++ main.cpp
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To demonstrate better of what can static analysis do I've set up a git
+&lt;a class="reference external" href="https://github.com/povilasb-com/cpp-static-analysis"&gt;repo&lt;/a&gt;
+with c++ project that has some sample bugs that scan-build might catch &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/cpp-static-analysis/#f4" id="footnote-reference-5" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;4&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Let's download the sample:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_9accaa3d42d84c0aa8447d599790f4dc-1" name="rest_code_9accaa3d42d84c0aa8447d599790f4dc-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_9accaa3d42d84c0aa8447d599790f4dc-1"&gt;&lt;/a&gt;$ git clone https://github.com/povilasb-com/cpp-static-analysis
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now run the scan-build analyzer:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1" name="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-1"&gt;&lt;/a&gt;$ &lt;span class="nb"&gt;cd&lt;/span&gt; cpp-static-analysis
+&lt;a id="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2" name="rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_48ccd627fac4450c9a1f0eaa9fddc5cd-2"&gt;&lt;/a&gt;$ scan-build make
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This should yield that some bugs were found:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;scan-build: 6 bugs found.
+scan-build: Run 'scan-view /tmp/scan-build-2014-03-16-200244-31706-1'
+to examine bug reports.&lt;/pre&gt;
+&lt;p&gt;To see the report in HTML format enter:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code bash"&gt;&lt;a id="rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1" name="rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1" href="http://blog.povilasb.com/posts/cpp-static-analysis/#rest_code_30ecd3deeb3f41569d0a3ef92341f75f-1"&gt;&lt;/a&gt;$ scan-view /tmp/scan-build-2014-03-16-200244-31706-1
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You should see something like this:&lt;/p&gt;
+&lt;img alt="/images/scan_build_result.png" src="http://blog.povilasb.com/images/scan_build_result.png"&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-4"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://llvm.org/apt/"&gt;http://llvm.org/apt/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-1"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://clang-analyzer.llvm.org/scan-build.html"&gt;http://clang-analyzer.llvm.org/scan-build.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-3"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://en.wikipedia.org/wiki/List_of_tools_for_static_code_analysis"&gt;http://en.wikipedia.org/wiki/List_of_tools_for_static_code_analysis&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f4" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-5"&gt;4&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/povilasb-com/cpp-static-analysis"&gt;https://github.com/povilasb-com/cpp-static-analysis&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f5" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/cpp-static-analysis/#footnote-reference-2"&gt;5&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/facebook/flint"&gt;https://github.com/facebook/flint&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>cpp</category><category>qa</category><guid>http://blog.povilasb.com/posts/cpp-static-analysis/</guid><pubDate>Sun, 16 Mar 2014 18:39:00 GMT</pubDate></item></channel></rss>

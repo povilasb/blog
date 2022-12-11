@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What I have learned from resurrecting my operating system | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../compiling-programs-for-redoxos/" title="Compiling programs for RedoxOS" type="text/html">
+<link rel="next" href="../using-libc%2B%2B-for-os-kernel-development/" title="Using libc++ for OS kernel development" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="What I have learned from resurrecting my operating system">
+<meta property="og:url" content="http://blog.povilasb.com/posts/what-i-have-learned-from-resurrecting-my-operating-system/">
+<meta property="og:description" content="Back at school in 2011 when I was still studying software engineering,
+I implemented a simple operating system
+for i386 architecture.  When I wrote it, I did not have too much experience
+with makefile">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-06-28T15:30:37+03:00">
+<meta property="article:tag" content="assembly">
+<meta property="article:tag" content="c">
+<meta property="article:tag" content="osdev">
+<meta property="article:tag" content="qemu">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">What I have learned from resurrecting my operating system</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2017-06-28T15:30:37+03:00" itemprop="datePublished" title="2017-06-28 15:30">2017-06-28 15:30</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Back at school in 2011 when I was still studying software engineering,
+I implemented a <a class="reference external" href="https://github.com/povilasb/simple-os">simple operating system</a>
+for i386 architecture.  When I wrote it, I did not have too much experience
+with makefiles, automated tests, builds, etc. Thus the project does not look
+too nice.
+For a long time I was eager to refactor some parts, port to C++, maybe use
+llvm and some of nice C++ features to better organize the code.
+Fortunately, I wish I could use C++11 or above, maybe even implement 64bit
+support and run it on arm architecture :)</p>
+<p>I just spent a week figuring out how to compile and run the OS.
+And eventually I've learned some new things. Some of it I knew, but forgot,
+some if it was completely new to me :)</p>
+<section id="qemu"><h2>QEMU</h2>
+<p>When I was implementing the OS, I used <a class="reference external" href="https://en.wikipedia.org/wiki/Bochs">bochs</a> to test it.
+But this time <a class="reference external" href="http://www.qemu.org/">QEMU</a> seemed more attractive to me.</p>
+<p>I can run QEMU with floppy disk image:</p>
+<pre class="literal-block">$ qemu-system-i386 -fda sos.img</pre>
+<p>Alternatively I can tell QEMU to emulate usb disk:</p>
+<pre class="literal-block">$ qemu-system-i386 -usb -usbdevice disk:sos.img
+$ qemu-system-i386 -usb -usbdevice host:$vendor_id:$product_id</pre>
+<p>I've learned that if I press <cite>ctrl+alt+shift+2</cite> when OS is running inside QEMU,
+it will open console which allows me to control the emulated machine.</p>
+<p>I can dump physical memory at given address:</p>
+<pre class="literal-block">xp /10xb 0x7E00</pre>
+<ul class="simple">
+<li><p>10 - number of items to display</p></li>
+<li><p>x - print numbers in hex format</p></li>
+<li><p>b - item size is one byte</p></li>
+</ul>
+<p>I can scroll console with <cite>ctrl+page up/down</cite>.</p>
+</section><section id="assembly"><h2>Assembly</h2>
+<p>My simple OS has a small handcrafter bootloader written in assembly language.
+I use <a class="reference external" href="https://en.wikipedia.org/wiki/Netwide_Assembler">nasm</a> to produce
+machine code.</p>
+<p>I can produce raw binaries with nasm:</p>
+<pre class="literal-block">$ nasm -f bin boot.asm -o boot.bin</pre>
+<p>To disassemble I use <cite>objdump</cite>:</p>
+<pre class="literal-block">$ objdump -D -b binary -m i386 -M intel boot.bin</pre>
+<p>where:</p>
+<ul class="simple">
+<li><p><cite>-D</cite> means disassemble all segments</p></li>
+<li><p><cite>-b binary</cite> specifies file format</p></li>
+<li><p><cite>-m i386</cite> specifies architecture</p></li>
+<li><p><cite>-M intel</cite> specifies assembly language syntax</p></li>
+</ul>
+<p>Also, it was new to me that nasm has <a class="reference external" href="https://www.tortall.net/projects/yasm/manual/html/nasm-local-label.html">local labels</a>.
+Meaning you can have multiple labels with the same name.
+Local labels must go after regular labels and start with a period:</p>
+<div class="code"><pre class="code asm"><a id="rest_code_914ecf071d5f4779b198b834c35b978a-1" name="rest_code_914ecf071d5f4779b198b834c35b978a-1" href="#rest_code_914ecf071d5f4779b198b834c35b978a-1"></a><span class="nf">label1</span><span class="w">  </span><span class="c1">; some code</span>
+<a id="rest_code_914ecf071d5f4779b198b834c35b978a-2" name="rest_code_914ecf071d5f4779b198b834c35b978a-2" href="#rest_code_914ecf071d5f4779b198b834c35b978a-2"></a><span class="na">.loop</span><span class="w">   </span><span class="c1">; some more code</span>
+<a id="rest_code_914ecf071d5f4779b198b834c35b978a-3" name="rest_code_914ecf071d5f4779b198b834c35b978a-3" href="#rest_code_914ecf071d5f4779b198b834c35b978a-3"></a><span class="w">        </span><span class="nf">jne</span><span class="w"> </span><span class="no">.loop</span><span class="w"></span>
+<a id="rest_code_914ecf071d5f4779b198b834c35b978a-4" name="rest_code_914ecf071d5f4779b198b834c35b978a-4" href="#rest_code_914ecf071d5f4779b198b834c35b978a-4"></a><span class="w">        </span><span class="nf">ret</span><span class="w"></span>
+<a id="rest_code_914ecf071d5f4779b198b834c35b978a-5" name="rest_code_914ecf071d5f4779b198b834c35b978a-5" href="#rest_code_914ecf071d5f4779b198b834c35b978a-5"></a><span class="nf">label2</span><span class="w">  </span><span class="c1">; some code</span>
+<a id="rest_code_914ecf071d5f4779b198b834c35b978a-6" name="rest_code_914ecf071d5f4779b198b834c35b978a-6" href="#rest_code_914ecf071d5f4779b198b834c35b978a-6"></a><span class="na">.loop</span><span class="w">   </span><span class="c1">; some more code</span>
+<a id="rest_code_914ecf071d5f4779b198b834c35b978a-7" name="rest_code_914ecf071d5f4779b198b834c35b978a-7" href="#rest_code_914ecf071d5f4779b198b834c35b978a-7"></a><span class="w">        </span><span class="nf">jne</span><span class="w"> </span><span class="no">.loop</span><span class="w"></span>
+<a id="rest_code_914ecf071d5f4779b198b834c35b978a-8" name="rest_code_914ecf071d5f4779b198b834c35b978a-8" href="#rest_code_914ecf071d5f4779b198b834c35b978a-8"></a><span class="w">        </span><span class="nf">ret</span><span class="w"></span>
+</pre></div>
+</section><section id="os-loading"><h2>OS loading</h2>
+<p>When computer starts, BIOS loads the first sector (512 bytes) of a bootable
+device.
+My bootloader (at least first stage) has to fit into those 512 bytes.
+Then it is able to read some more data: other parts of bootloader or kernel.</p>
+<p>BIOS provides basic functionality to read some data from floppy or USB disk.
+In real mode BIOS emulates USB as floppy. Thus reading from USB is identical
+to reading from floppy.</p>
+<p>There are two functions to read data from disk:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH.3D02h:_Read_Sectors_From_Drive">int 0x13, ah=0x2</a></p></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH.3D42h:_Extended_Read_Sectors_From_Drive">int 0x13, ah=0x42</a></p></li>
+</ul>
+<p>The difference is that <cite>ah=0x2</cite> is older and uses CHS (Cylinder, Head, Sector)
+addressing. Whereas <cite>ah=0x42</cite> uses linear addressing.
+Personally, I prefer <cite>ah=0x42</cite>, because it's more intuitive to me.
+And it's use looks more or less like this:</p>
+<div class="code"><pre class="code asm"><a id="rest_code_261e87cd926d4d9f950b5b42badf396c-1" name="rest_code_261e87cd926d4d9f950b5b42badf396c-1" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-1"></a><span class="nf">boot_disk</span><span class="w"> </span><span class="no">db</span><span class="w"> </span><span class="mi">0x80</span><span class="w"> </span><span class="c1">; disk number</span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-2" name="rest_code_261e87cd926d4d9f950b5b42badf396c-2" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-2"></a><span class="nl">dapack:</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-3" name="rest_code_261e87cd926d4d9f950b5b42badf396c-3" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-3"></a><span class="w">        </span><span class="nf">db</span><span class="w"> </span><span class="mi">0x10</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-4" name="rest_code_261e87cd926d4d9f950b5b42badf396c-4" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-4"></a><span class="w">        </span><span class="nf">db</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-5" name="rest_code_261e87cd926d4d9f950b5b42badf396c-5" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-5"></a><span class="nl">.count:</span><span class="w"> </span><span class="nf">dw</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="c1">; int 13 resets this to # of blocks actually read/written</span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-6" name="rest_code_261e87cd926d4d9f950b5b42badf396c-6" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-6"></a><span class="nl">.buf:</span><span class="w">   </span><span class="nf">dw</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="c1">; memory buffer destination address</span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-7" name="rest_code_261e87cd926d4d9f950b5b42badf396c-7" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-7"></a><span class="nl">.seg:</span><span class="w">   </span><span class="nf">dw</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="c1">; in memory page zero</span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-8" name="rest_code_261e87cd926d4d9f950b5b42badf396c-8" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-8"></a><span class="nl">.addr:</span><span class="w">  </span><span class="nf">dq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="c1">; skip 1st disk sector which is bootloader, which is loaded by BIOS</span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-9" name="rest_code_261e87cd926d4d9f950b5b42badf396c-9" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-9"></a>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-10" name="rest_code_261e87cd926d4d9f950b5b42badf396c-10" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-10"></a><span class="nf">mov</span><span class="w"> </span><span class="no">ax</span><span class="p">,</span><span class="w"> </span><span class="mi">127</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-11" name="rest_code_261e87cd926d4d9f950b5b42badf396c-11" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-11"></a><span class="nf">mov</span><span class="w"> </span><span class="p">[</span><span class="no">dapack.count</span><span class="p">],</span><span class="w"> </span><span class="no">ax</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-12" name="rest_code_261e87cd926d4d9f950b5b42badf396c-12" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-12"></a><span class="nf">mov</span><span class="w"> </span><span class="no">ax</span><span class="p">,</span><span class="w"> </span><span class="mi">0x7E00</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-13" name="rest_code_261e87cd926d4d9f950b5b42badf396c-13" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-13"></a><span class="nf">mov</span><span class="w"> </span><span class="p">[</span><span class="no">dapack.buf</span><span class="p">],</span><span class="w"> </span><span class="no">ax</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-14" name="rest_code_261e87cd926d4d9f950b5b42badf396c-14" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-14"></a>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-15" name="rest_code_261e87cd926d4d9f950b5b42badf396c-15" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-15"></a><span class="nf">mov</span><span class="w"> </span><span class="no">dl</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="no">boot_disk</span><span class="p">]</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-16" name="rest_code_261e87cd926d4d9f950b5b42badf396c-16" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-16"></a><span class="nf">mov</span><span class="w"> </span><span class="no">si</span><span class="p">,</span><span class="w"> </span><span class="no">dapack</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-17" name="rest_code_261e87cd926d4d9f950b5b42badf396c-17" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-17"></a><span class="nf">mov</span><span class="w"> </span><span class="no">ah</span><span class="p">,</span><span class="w"> </span><span class="mi">0x42</span><span class="w"></span>
+<a id="rest_code_261e87cd926d4d9f950b5b42badf396c-18" name="rest_code_261e87cd926d4d9f950b5b42badf396c-18" href="#rest_code_261e87cd926d4d9f950b5b42badf396c-18"></a><span class="nf">int</span><span class="w"> </span><span class="mi">0x13</span><span class="w"></span>
+</pre></div>
+</section><section id="memory-paging"><h2>Memory paging</h2>
+<p>When I was finally able to boot the OS, all I saw was page faults.
+I had completely forgotten how i386 paging works, except that page size
+usually is 4096 bytes :)</p>
+<section id="mmu"><h3>MMU</h3>
+<p>In protected mode MMU (Memory Management Unit) translates the virtual address
+the running process is trying to access into physical address. MMU consults
+CR3 register and two tables: page directory and page table:</p>
+<pre class="literal-block">                               Page Tables                  Pages
+                             +--------------+           +--------------+
+                             |              |---------&gt; |              |
+                             +--------------+           |              |
+                             |              |-----+     |              |
+                             +--------------+     |     |              |
+                      +----&gt; |              |     |     |              |
+ Page Directory       |      +--------------+     |     +--------------+
++--------------+      |                           |
+|              |------+      +--------------+     |     +--------------+
++--------------+             |              |     +----&gt;|              |
+|              |------+      +--------------+           |              |
++--------------+      |      |              |           |              |
+|              |      |      +--------------+           |              |
++--------------+      +----&gt; |              |           |              |
+                             +--------------+           +--------------+</pre>
+<p>I had completely forgotten about control registers.
+Basically <a class="reference external" href="https://en.wikipedia.org/wiki/Control_register#CR3">CR3</a> is
+a 32bit register that holds the address of page directory.</p>
+<p>MMU algorithm:</p>
+<pre class="literal-block">page_directory_addr = CR3
+page_table_addr = page_directory_addr[virtual_addr[31:22]]
+page_addr = page_table[virtual_addr[21:12]]
+physical_addr = page_addr[virtual_addr[11:0]]</pre>
+</section><section id="context-swithing"><h3>Context swithing</h3>
+<p>When it was pretty much clear how paging works, it was easier to investigate
+page faults.
+After playing around for some time, it was clear that context switching
+was causing the page faults. So I started to refresh my knowledge how pages
+are refreshed for running processes.</p>
+<p>Kernel holds physical addresses of every page a process owns. Virtual memory
+for every process starts a 0x0. So what task scheduler does, when it switches
+the processes, it alters the <cite>Page Tables</cite> entries to point to new pages.
+Turns out everything was ok with this procedure.</p>
+<p>The BUG was that, when new pages were linked, MMU would not start using
+them immediately because of <a class="reference external" href="https://en.wikipedia.org/wiki/Translation_lookaside_buffer">TLB</a>.
+I did not know about TLB before, but basically it's a cache of virtual to
+physical address mappings.
+Flushing TLB is pretty easy. I only have to update CR3 register:</p>
+<div class="code"><pre class="code c"><a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-1" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-1" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-1"></a><span class="kt">void</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-2" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-2" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-2"></a><span class="nf">set_page_directory</span><span class="p">(</span><span class="n">PageDirectory</span><span class="w"> </span><span class="o">*</span><span class="n">page_dir</span><span class="p">)</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-3" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-3" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-3"></a><span class="p">{</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-4" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-4" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-4"></a><span class="w">    </span><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="w"> </span><span class="p">(</span><span class="s">"mov %0, %%eax;"</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-5" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-5" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-5"></a><span class="w">        </span><span class="s">"mov %%eax, %%cr3"</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-6" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-6" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-6"></a><span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">"r"</span><span class="w"> </span><span class="p">(</span><span class="n">page_dir</span><span class="p">)</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-7" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-7" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-7"></a><span class="w">        </span><span class="o">:</span><span class="w"> </span><span class="s">"eax"</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-8" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-8" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-8"></a><span class="w">        </span><span class="p">);</span><span class="w"></span>
+<a id="rest_code_08d8c68df2794e0fa0121a626058ca6d-9" name="rest_code_08d8c68df2794e0fa0121a626058ca6d-9" href="#rest_code_08d8c68df2794e0fa0121a626058ca6d-9"></a><span class="p">}</span><span class="w"></span>
+</pre></div>
+<p>So, I updated OS task scheduler to update CR3 every time context switch
+happened. And that fixed the page faults.
+After that the OS ran smoothly, just like 6 years ago :)</p>
+</section></section><section id="summary"><h2>Summary</h2>
+<p>I'm happy I spent 5 days on this. I've learned some QEMU, nasm, objdump
+features, refreshed my knowledge of i386 boot process and memory management.
+And now I have a working environment that empowers me to play with real
+devices, misc CPU instructions, test some OS design ideas, etc.</p>
+</section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/assembly/" rel="tag">assembly</a></li>
+            <li><a class="tag p-category" href="../../categories/c/" rel="tag">c</a></li>
+            <li><a class="tag p-category" href="../../categories/osdev/" rel="tag">osdev</a></li>
+            <li><a class="tag p-category" href="../../categories/qemu/" rel="tag">qemu</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../compiling-programs-for-redoxos/" rel="prev" title="Compiling programs for RedoxOS">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../using-libc%2B%2B-for-os-kernel-development/" rel="next" title="Using libc++ for OS kernel development">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

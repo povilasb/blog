@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about dns)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/dns.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Data tunelling over DNS</title><link>http://blog.povilasb.com/posts/data-tunelling-over-dns/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Some public Wi-Fi spots have internet access restricted until you authenticate
+yourself. This quite often happens in airports and hotels.
+One interesting thing about such network setups is that DNS is working.
+This fact can be exploited to tunnel arbitrary data through DNS
+requests/responses.&lt;/p&gt;
+&lt;p&gt;In a nutshell the process looks like this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;                   +-----------+
+                   | DNS query |
++--------+    1    |           |
+| Client | ------&amp;gt; | +------+  |
++--------+         | | Data |  |
+    ^              | +------+  |
+    |              +-----------+
+    |                   |
+    | 6                 | 2
+    |                   v
+    |             +--------------+
+    +------------ | DNS Resolver | --------------+
+                  |    @ISP      |        3      |
+                  +--------------+               |
+                         ^                       |
+                       5 |                       |
+                         |                       V
+                  +--------------+        +------------+
+                  | DNS response |        | DNS server |
+                  |              |        +------------+
+                  |   +------+   |               |
+                  |   | Data |   | &amp;lt;-------------+
+                  |   +------+   |         4
+                  +--------------+&lt;/pre&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;Client encodes his data into DNS query.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;DNS query is sent to DNS resolver which usually is at &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Internet_service_provider"&gt;ISP&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;DNS resolver sends request to DNS server &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;. This DNS server is our software
+which is capable of decoding data from DNS query.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Our DNS server encodes some arbitrary data to DNS response.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Response is sent back to DNS resolver.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Resolver relays the response to client which then can decode the data
+inside DNS response.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;section id="setup"&gt;
+&lt;h2&gt;Setup&lt;/h2&gt;
+&lt;p&gt;The existing DNS ecosystem will tunnel our data. But we need to control
+DNS server which decodes our requests and sends responses back.
+Thus we need 4 things:&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;control over a real domain,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;NS record pointing to our server,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;a server with UDP port 53 open,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;software handling DNS requests.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;I own &lt;cite&gt;povilasb.com&lt;/cite&gt; domain thus I can delegate a subdomain for my DNS server:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;ns.povilasb.com        A       86.100.203.141
+
+$ host ns.povilasb.com
+ns.povilasb.com has address 86.100.203.141&lt;/pre&gt;
+&lt;p&gt;Then to route all queries for &lt;cite&gt;tun.povilasb.com&lt;/cite&gt; subdomains to &lt;cite&gt;ns.povilasb.com&lt;/cite&gt;
+server NS record is required:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;tun.povilasb.com       NS      ns.povilasb.com&lt;/pre&gt;
+&lt;p&gt;Finally, a simple Python script is sufficient to receive DNS requests:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-1" name="rest_code_8692e16a0af7420eb581b8e52080ba99-1" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-1"&gt;&lt;/a&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;socket&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-2" name="rest_code_8692e16a0af7420eb581b8e52080ba99-2" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-2"&gt;&lt;/a&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-3" name="rest_code_8692e16a0af7420eb581b8e52080ba99-3" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-3"&gt;&lt;/a&gt;&lt;span class="n"&gt;sock&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_DGRAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-4" name="rest_code_8692e16a0af7420eb581b8e52080ba99-4" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-4"&gt;&lt;/a&gt;&lt;span class="n"&gt;sock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="s1"&gt;'0.0.0.0'&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;53&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-5" name="rest_code_8692e16a0af7420eb581b8e52080ba99-5" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-5"&gt;&lt;/a&gt;&lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="kc"&gt;True&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-6" name="rest_code_8692e16a0af7420eb581b8e52080ba99-6" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-6"&gt;&lt;/a&gt;    &lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;addr&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;sock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recvfrom&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;512&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;a id="rest_code_8692e16a0af7420eb581b8e52080ba99-7" name="rest_code_8692e16a0af7420eb581b8e52080ba99-7" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#rest_code_8692e16a0af7420eb581b8e52080ba99-7"&gt;&lt;/a&gt;    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;addr&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The script must be run the script with root permissions:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ sudo python3 main.py&lt;/pre&gt;
+&lt;p&gt;Now we can test if server works by sending DNS requests from any computer:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ host abc.tun.povilasb.com&lt;/pre&gt;
+&lt;p&gt;Python script should write received buffer to stdout:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;sudo python3 main.py
+('212.59.18.8', 64329) b'Y\xbd\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x03abc\x03tun\x08povilasb\x03com\x00\x00\x01\x00\x01\x00\x00)\x10\x00\x00\x00\x80\x00\x00\x00'&lt;/pre&gt;
+&lt;p&gt;If you can see such output, it means that you set up DNS records correctly.
+Now we can replace this small Python script with one that is capable of
+encoding/decoding data to DNS requests and responses.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="data-encoding"&gt;
+&lt;h2&gt;Data encoding&lt;/h2&gt;
+&lt;p&gt;We can implement bidirectional communication on top of DNS:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;+--------+   request     +------------+
+| Client | ------------&amp;gt; | DNS Server |
++--------+               +------------+
+    ^                          |
+    |        response          |
+    +--------------------------+&lt;/pre&gt;
+&lt;p&gt;Request and response are encoded in different ways and must be handled
+separately.&lt;/p&gt;
+&lt;p&gt;Some sample Python code can be found at &lt;a class="reference external" href="https://github.com/povilasb/iptun/blob/5da201661474b5a3e0fb898f2c445929cb2a5233/iptun/dns.py"&gt;https://github.com/povilasb/iptun/blob/5da201661474b5a3e0fb898f2c445929cb2a5233/iptun/dns.py&lt;/a&gt;.
+And if you want to see a full working DNS tunneling server, check
+&lt;a class="reference external" href="https://github.com/yarrick/iodine"&gt;https://github.com/yarrick/iodine&lt;/a&gt;. Although, it's a C based project which is
+more difficult to read.&lt;/p&gt;
+&lt;section id="upstream"&gt;
+&lt;h3&gt;Upstream&lt;/h3&gt;
+&lt;p&gt;As funny as it sounds we can encode data to domain name. E.g. DNS query with
+record &lt;cite&gt;thisismydata.tun.example.com&lt;/cite&gt; carries "thisismydata" string which can
+be anything.
+We can even encode binary data this way using Base64 encoding:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;dGhpc2lzbXlkYXRhIC1uCg==.tun.example.com&lt;/pre&gt;
+&lt;p&gt;Unfortunately, DNS names have some limitations which we have to respect
+if we want our queries to be delivered &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-2" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt; max 255 bytes
+ _____________
+|             |
+v             V
+label.name.com.
+      ^  ^
+      |__|
+
+     max 63 bytes&lt;/pre&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;p&gt;maximum total DNS name length is 255 bytes,&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;every substring separated by dot must not exceed 63 bytes.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;So if you have data encoded to Base64 which exceeds 63 bytes, it must
+be split into multiple parts:&lt;/p&gt;
+&lt;p&gt;&lt;cite&gt;dmVyeSBsb25nIHRleHQgZXhjZWVkaW5nIDYzIGJ5dGVzLCBleGNlZWRpbmcgNjMgYnl0ZXMK&lt;/cite&gt; is
+encoded to
+&lt;cite&gt;dmVyeSBsb25nIHRleHQgZXhjZWVkaW5nIDYzIGJ5dGVzLCBleGNlZWRpbmcgNjM.gYnl0ZXMK.tun.example.com&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;Note that if you query for the same domain name twice, the query will not be
+delivered to our DNS server, instead cache will be used.
+Thus I add some random nonce to every domain name:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;data.a2.example.com
+data.m4.example.com&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="downstream"&gt;
+&lt;h3&gt;Downstream&lt;/h3&gt;
+&lt;p&gt;When encoding data to DNS response multiple record types can be used: NULL,
+PRIVATE, TXT, SRV, MX, CNAME and A records. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-3" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;
+The record type is selected in DNS query.&lt;/p&gt;
+&lt;p&gt;I know for a fact that TXT and NULL records allow arbitrary data to be attached.
+Thus you encode your data inside TXT record and send it back to the client.
+Then in Wireshark the DNS response looks like this:&lt;/p&gt;
+&lt;img alt="/images/dns_txt_resp.png" src="http://blog.povilasb.com/images/dns_txt_resp.png"&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="footnote-1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;There's actually more steps involved until DNS Resolver knows the
+DNS server it has to communicate with: &lt;a class="reference external" href="https://howdns.works/ep1/"&gt;https://howdns.works/ep1/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="footnote-2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-reference-2"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.ietf.org/rfc/rfc1035.txt"&gt;https://www.ietf.org/rfc/rfc1035.txt&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="footnote-3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/data-tunelling-over-dns/#footnote-reference-3"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/yarrick/iodine#operational-info"&gt;https://github.com/yarrick/iodine#operational-info&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>dns</category><category>networking</category><guid>http://blog.povilasb.com/posts/data-tunelling-over-dns/</guid><pubDate>Thu, 12 Oct 2017 16:35:24 GMT</pubDate></item></channel></rss>

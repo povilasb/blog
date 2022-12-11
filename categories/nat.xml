@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about nat)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/nat.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Network Address Translation</title><link>http://blog.povilasb.com/posts/network-address-translation/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;There is a lot of resources on the Internet explaining how NAT works, but I
+just want to have a post here that will lay the foundations for the subsequent
+post I was meaning to write - &lt;a href="https://en.wikipedia.org/wiki/Hole_punching_%28networking%29"&gt;hole
+punching&lt;/a&gt;.
+Network Address Translation (later simply NAT) is a method to connect multiple
+LAN devices to the Internet via a single IP address. NAT is implemented by
+our home routers. Technically speaking NAT changes source IP and source port
+fields of every outgoing UDP/TCP packet and destination IP and port of every
+incoming packet.&lt;/p&gt;
+&lt;h3&gt;Example&lt;/h3&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;                   +---------------+
+                   | Target Server |
+                   |    1.1.1.1    |
+                   +---------------+
+                          ^
+                          |                            Packet source IP and
+                          |                          / port number are
+      +---------------------------------------------+  overwritten by our router
+      |                TCP/UDP Packet               |
+      +-------------+----------+---------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP  | DST_PORT |
+      +-------------+----------+---------+----------+
+      | 78.53.1.5   |   7000   | 1.1.1.1 |   80     |
+      +-------------+----------+---------+----------+
+                          |
+                          |
+                  +---------------+
+                  |   78.53.1.5   | - Router IP assigned by our ISP
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 | - Router IP on Local Area Network
+                  +---------------+
+                          ^
+                          |                            Our machine on LAN
+                          |                          / sends this packet to
+      +---------------------------------------------+  the 1.1.1.1 server
+      |                TCP/UDP Packet               |
+      +-------------+----------+---------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP  | DST_PORT |
+      +-------------+----------+---------+----------+
+      | 192.168.1.5 |   5000   | 1.1.1.1 |   80     |
+      +-------------+----------+---------+----------+
+                          ^
+                          |
+                          |
+                    +-------------+
+                    |  PC on LAN  |
+                    | 192.168.1.5 |
+                    +-------------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;NAT Table&lt;/h3&gt;
+&lt;p&gt;The fundamental way NAT works is pretty straightforward:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Router keeps a table of port mappings - NAT table. As new packets travel
+   through the router this table is updated, e.g.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Before packet is sent over the Internet, it's source port will be replaced
+   with &lt;code&gt;NEW_PORT&lt;/code&gt;. So this is the port, the target server will see when the
+   packet arrives.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;When incoming packet is received, router finds a row in the NAT table whose
+   &lt;code&gt;NEW_PORT&lt;/code&gt; matches packet destination port. Then it forwards the packet
+   to machine on LAN using &lt;code&gt;SRC_IP&lt;/code&gt;:&lt;code&gt;SRC_PORT&lt;/code&gt; information from NAT table.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;                   +---------------+
+                   | Target Server |
+                   |    1.1.1.1    |
+                   +---------------+
+                          |
+                          |
+                          V
+      +-----------------------------------------------+
+      |                  TCP/UDP Packet               |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      |   1.1.1.1   |    80    | 78.53.1.5 |   7000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                  +---------------+
+                  |   78.53.1.5   | - Router IP assigned by our ISP
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 | - Router IP on Local Area Network
+                  +---------------+
+                          |
+                          |
+                          V
+      +-------------------------------------------------+
+      |                  TCP/UDP Packet                 |
+      +-------------+----------+-------------+----------+
+      |    SRC_IP   | SRC_PORT |   DST_IP    | DST_PORT |
+      +-------------+----------+-------------+----------+
+      |   1.1.1.1   |    80    | 192.168.1.5 |   5000   |
+      +-------------+----------+-------------+----------+
+                          |
+                          |
+                          V
+                    +-------------+
+                    |  PC on LAN  |
+                    | 192.168.1.5 |
+                    +-------------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;NAT types&lt;/h3&gt;
+&lt;p&gt;Depending on how &lt;code&gt;NEW_PORT&lt;/code&gt; is assigned NATs fall under 2 categories:
+EIM (Endpoint Independent Mapping) and EDM (Endpoint Dependent Mapping).&lt;/p&gt;
+&lt;h4&gt;Endpoint independent mapping NAT&lt;/h4&gt;
+&lt;p&gt;EIM NAT&lt;sup id="fnref:1"&gt;&lt;a class="footnote-ref" href="http://blog.povilasb.com/posts/network-address-translation/#fn:1"&gt;1&lt;/a&gt;&lt;/sup&gt; (those abbreviations can get pretty arcane, hugh? :D) assigns
+unique &lt;code&gt;NEW_PORT&lt;/code&gt; for each unique &lt;code&gt;(Protocol, SRC_IP, SRC_PORT)&lt;/code&gt; tuple. Let's
+see an example.&lt;/p&gt;
+&lt;p&gt;Say we have an empty NAT table:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then we send UDP packet to &lt;code&gt;1.1.1.1:80&lt;/code&gt; . Network Address Translation kicks off
+and does it's job:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We send another UDP packet with the same source IP and port (this is possible
+if we use the same UDP socket), but this time to &lt;code&gt;8.8.8.8:80&lt;/code&gt;. This time NAT
+table already has an entry for source endpoint &lt;code&gt;192.168.1.5:5000&lt;/code&gt;, so another
+one won't be added:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We send yet another UDP packet, but this time we use different source IP
+and/or port. EIM NAT will add a new port mapping in this case:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.5 |   6000   |   1.1.1.1   |   80     |  8000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4&gt;Endpoint dependent mapping NAT&lt;/h4&gt;
+&lt;p&gt;It is also known as symmetric NAT&lt;sup id="fnref:2"&gt;&lt;a class="footnote-ref" href="http://blog.povilasb.com/posts/network-address-translation/#fn:2"&gt;2&lt;/a&gt;&lt;/sup&gt;. EDM NAT assigns unique &lt;code&gt;NEW_PORT&lt;/code&gt; for
+each unique tuple &lt;code&gt;(Protocol, SRC_IP, SRC_PORT, DST_IP, DST_PORT)&lt;/code&gt;. Let's
+see an example.&lt;/p&gt;
+&lt;p&gt;Let's start with a NAT table containing a single entry&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We send another UDP packet with the same source IP and port to different target
+server &lt;code&gt;8.8.8.8:80&lt;/code&gt;. Since NAT table does not have an entry to this endpoing,
+new port mapping will be added:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.5 |   5000   |   8.8.8.8   |   80     |  8000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Say we send another packet, this time to the same IP address, but different
+port. Even in this case new port mapping will be added:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.5 |   5000   |   8.8.8.8   |   80     |  8000    |
+    |    UDP   | 192.168.1.5 |   5000   |   8.8.8.8   |   443    |  9000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;NAT filtering types&lt;/h3&gt;
+&lt;p&gt;NATs can be grouped into different types based on how they filter incoming
+packets&lt;sup id="fnref:3"&gt;&lt;a class="footnote-ref" href="http://blog.povilasb.com/posts/network-address-translation/#fn:3"&gt;3&lt;/a&gt;&lt;/sup&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;full cone NAT&lt;/li&gt;
+&lt;li&gt;port restricted cone NAT&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4&gt;Full cone NAT&lt;/h4&gt;
+&lt;p&gt;This is the least restrictive type of NAT. Full cone NAT allows any incoming
+packet whose destination port matches some &lt;code&gt;NEW_PORT&lt;/code&gt; in NAT table.&lt;/p&gt;
+&lt;p&gt;E.g. say we have such NAT table:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    |    UDP   | 192.168.1.8 |   5000   |   8.8.8.8   |   80     |  8000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then the packet arrives to our router:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;      +-----------------------------------------------+
+      |                  UDP Packet                   |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      |   1.1.1.1   |    80    | 78.53.1.5 |   7000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                          V
+                  +---------------+
+                  |   78.53.1.5   |
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 |
+                  +---------------+
+                         |
+                         | ----- Packet is forwarded to 192.168.1.5
+                         V
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The destination port of a packet (&lt;code&gt;7000&lt;/code&gt;) is matched with &lt;code&gt;NEW_PORT&lt;/code&gt; in
+router's NAT table. Since we find an entry, the packet is forwarded.
+Let's take another example. Say we have the same NAT table, but the incoming
+packet is:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;      +-----------------------------------------------+
+      |                  UDP Packet                   |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      |   1.1.1.1   |    80    | 78.53.1.5 |   6000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                          V
+                  +---------------+
+                  |   78.53.1.5   |
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 |
+                  +---------------+
+                         |
+                         X ----- Packet is dropped
+                         V
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This packet will be discarded since its destination port &lt;code&gt;6000&lt;/code&gt; does not
+exist in NAT under &lt;code&gt;NEW_PORT&lt;/code&gt; column.&lt;/p&gt;
+&lt;p&gt;Finally, I'd like to give another example:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;      +-----------------------------------------------+
+      |                  UDP Packet                   |
+      +-------------+----------+-----------+----------+
+      |    SRC_IP   | SRC_PORT | DST_IP    | DST_PORT |
+      +-------------+----------+-----------+----------+
+      | 86.100.4.5  |  87634   | 78.53.1.5 |   8000   |
+      +-------------+----------+-----------+----------+
+                          |
+                          |
+                          V
+                  +---------------+
+                  |   78.53.1.5   |
+                  |               |
+                  |     Router    |
+                  |               |
+                  | 192.168.1.254 |
+                  +---------------+
+                         |
+                         | ----- Packet is forwarded to 192.168.1.5
+                         V
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Notice how this packet is forwarded even though it's originating from a
+random source machine. This is full cone NAT in a nutshell - it allows packets
+go through as long as their destination port is inside NAT table.&lt;/p&gt;
+&lt;h4&gt;Port restricted cone NAT&lt;/h4&gt;
+&lt;p&gt;This is the most restrictive NAT. It allows incoming packets only from
+endpoints that we sent the packet to before. That means&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;destination port of a packet must match &lt;code&gt;NEW_PORT&lt;/code&gt; in NAT table;&lt;/li&gt;
+&lt;li&gt;source IP and port of a packet must match destination IP and port of the
+   same row in NAT table.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;So say we have a NAT table:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code literal-block"&gt;    +----------+-------------+----------+-------------+----------+----------+
+    | Protocol |    SRC_IP   | SRC_PORT |    DST_IP   | DST_PORT | NEW_PORT |
+    +----------+-------------+----------+-------------+----------+----------+
+    |    UDP   | 192.168.1.5 |   5000   |   1.1.1.1   |   80     |  7000    |
+    +----------+-------------+----------+-------------+----------+----------+
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then UDP packet with &lt;code&gt;(SRC_IP=1.1.1.1, SRC_PORT=80, DST_IP=78.53.1.5, DST_PORT=7000)&lt;/code&gt;
+will be allowed, but these packets will be dropped:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;(SRC_IP=1.1.1.1, SRC_PORT=80, DST_IP=78.53.1.5, DST_PORT=6000)&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;(SRC_IP=1.1.1.1, SRC_PORT=443, DST_IP=78.53.1.5, DST_PORT=7000)&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;(SRC_IP=8.8.8.8, SRC_PORT=80, DST_IP=78.53.1.5, DST_PORT=7000)&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Glossary&lt;/h3&gt;
+&lt;p&gt;endpoint - IP:port pair.&lt;/p&gt;
+&lt;div class="footnote"&gt;
+&lt;hr&gt;
+&lt;ol&gt;
+&lt;li id="fn:1"&gt;
+&lt;p&gt;https://docs.rs/p2p/0.6.0/p2p/#endpoint-independent-mapping-eim &lt;a class="footnote-backref" href="http://blog.povilasb.com/posts/network-address-translation/#fnref:1" title="Jump back to footnote 1 in the text"&gt;↩&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li id="fn:2"&gt;
+&lt;p&gt;https://www.think-like-a-computer.com/2011/09/19/symmetric-nat/ &lt;a class="footnote-backref" href="http://blog.povilasb.com/posts/network-address-translation/#fnref:2" title="Jump back to footnote 2 in the text"&gt;↩&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li id="fn:3"&gt;
+&lt;p&gt;https://www.think-like-a-computer.com/2011/09/16/types-of-nat &lt;a class="footnote-backref" href="http://blog.povilasb.com/posts/network-address-translation/#fnref:3" title="Jump back to footnote 3 in the text"&gt;↩&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;</description><category>nat</category><category>networking</category><guid>http://blog.povilasb.com/posts/network-address-translation/</guid><pubDate>Sun, 20 Jan 2019 17:39:39 GMT</pubDate></item></channel></rss>

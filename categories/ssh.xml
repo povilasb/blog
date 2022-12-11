@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about ssh)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/ssh.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>SSH Agent Forwarding</title><link>http://blog.povilasb.com/posts/ssh-agent-forwarding/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Sometimes I want to use my SSH keys from remote server.
+But for security reasons copying SSH keys is a bad idea.
+Fortunately there's a better way to do this - ssh-agent daemon.
+&lt;cite&gt;ssh-agent&lt;/cite&gt; holds privates keys in memory and allows to authenticate over network.
+When I &lt;cite&gt;ssh&lt;/cite&gt; to remote server, I can forward &lt;cite&gt;ssh-agent&lt;/cite&gt; connection.
+Thus remote server will be using my local &lt;cite&gt;ssh-agent&lt;/cite&gt; to authenticate connections.&lt;/p&gt;
+&lt;p&gt;However, every time I want to forward ssh agent, I can't remember how.&lt;/p&gt;
+&lt;p&gt;Actually it's as simple as:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;eval `ssh-agent -s`
+ssh-add
+ssh -A povilas@example.com&lt;/pre&gt;</description><category>linux</category><category>ssh</category><guid>http://blog.povilasb.com/posts/ssh-agent-forwarding/</guid><pubDate>Wed, 07 Jun 2017 19:10:07 GMT</pubDate></item></channel></rss>

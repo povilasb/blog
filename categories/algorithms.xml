@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about algorithms)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/algorithms.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Boyer-Moore string search</title><link>http://blog.povilasb.com/posts/boyer-moore-string-search/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Boyer-Moore is a string search algorithm.
+The first time I heard about it was on FreeBSD mailing list when someone
+was explaining "why GNU grep is fast". &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f2" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;
+Although, it was invented in 1977 &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f3" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;3&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;, turns out this algorithm is
+considered one of the most efficient and very widely used even nowadays. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f1" id="footnote-reference-3" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;So I thought I have to at least take a brief overview of this classic algorithm.&lt;/p&gt;
+&lt;section id="overview"&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;p&gt;Similarly to &lt;a class="reference external" href="https://en.wikipedia.org/wiki/String_searching_algorithm#Na.C3.AFve_string_search"&gt;naive string search&lt;/a&gt;.
+the algorithm scans text from left to right searching for the given pattern.
+Although, the pattern is matched from right to left:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;Text:    X X X A B C X X X D B C
+Pattern:       D B C - - -&amp;gt; pattern shift
+              &amp;lt;- - - pattern matching&lt;/pre&gt;
+&lt;p&gt;What makes Boyer-Moore algorithm faster than naive string search is the
+heuristics it uses to shift pattern right. Rather than shifting one symbol
+at a time, this algorithm uses some heuristics to skip multiple symbols.
+We can optionally choose which heuristics to use. In order to go fastest,
+we should use them all.&lt;/p&gt;
+&lt;p&gt;Each heuristic calculates how many positions we can skip. Then we choose the
+maximum number of skips and repeat the matching.&lt;/p&gt;
+&lt;p&gt;At first glance the algorithm looks pretty easy. But it has multiple
+cases which might make it a little cofusing.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="bad-character-heuristic"&gt;
+&lt;h2&gt;Bad character heuristic&lt;/h2&gt;
+&lt;p&gt;It states that when text does not match the pattern at a given position, we
+can shift the pattern right until it does. &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f4" id="footnote-reference-4" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;4&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7
+T: X X X A B C A C
+P:     B C A C
+       0 1 2 3&lt;/pre&gt;
+&lt;p&gt;In this case the algorithm starts matching the pattern at text position 5
+and pattern position 3. The mismatch occurs at &lt;cite&gt;text_pos&lt;/cite&gt; 4 and &lt;cite&gt;pattern_pos&lt;/cite&gt; 2.
+The mismatched symbol is 'B'. 'B' exists in the &lt;cite&gt;pattern_pos&lt;/cite&gt; 0.
+Thus we can skip 2 symbols: &lt;cite&gt;2 - 0 = 2&lt;/cite&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7
+T: X X X A B C A C
+P:         B C A C
+           0 1 2 3&lt;/pre&gt;
+&lt;p&gt;In case the pattern does not have the mismatched symbol, we can move it
+past that symbol:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:     D C A C&lt;/pre&gt;
+&lt;p&gt;Mismatched symbol is &lt;cite&gt;B&lt;/cite&gt; which does not exist in the pattern.
+Thus the pattern is shifted to:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:           D C A C&lt;/pre&gt;
+&lt;section id="preprocessing"&gt;
+&lt;h3&gt;Preprocessing&lt;/h3&gt;
+&lt;p&gt;When mismatch happens we could search for a matching symbol traversing
+the pattern backwards. That would take O(n) comparisons.
+Instead we can achieve O(1) with a lookup table.
+This table is constructed once for the given pattern and it holds the last
+position for a given character.  E.g.:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-1" name="rest_code_29d83651df1346e39ab76d30cf910d5f-1" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-1"&gt;&lt;/a&gt;&lt;span class="n"&gt;pattern&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;'abca'&lt;/span&gt;
+&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-2" name="rest_code_29d83651df1346e39ab76d30cf910d5f-2" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-2"&gt;&lt;/a&gt;&lt;span class="n"&gt;table&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;'a'&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;
+&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-3" name="rest_code_29d83651df1346e39ab76d30cf910d5f-3" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-3"&gt;&lt;/a&gt;&lt;span class="n"&gt;table&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;'b'&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;a id="rest_code_29d83651df1346e39ab76d30cf910d5f-4" name="rest_code_29d83651df1346e39ab76d30cf910d5f-4" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_29d83651df1346e39ab76d30cf910d5f-4"&gt;&lt;/a&gt;&lt;span class="n"&gt;table&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;'c'&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;div class="code"&gt;&lt;pre class="code python"&gt;&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1"&gt;&lt;/a&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;preproc_bad_character&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pattern&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="nb"&gt;list&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2"&gt;&lt;/a&gt;    &lt;span class="n"&gt;last_char_pos&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;256&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3"&gt;&lt;/a&gt;    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;enumerate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pattern&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4"&gt;&lt;/a&gt;        &lt;span class="n"&gt;last_char_pos&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nb"&gt;ord&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;)]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;
+&lt;a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5"&gt;&lt;/a&gt;    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;last_char_pos&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="good-suffix-heuristic"&gt;
+&lt;h2&gt;Good suffix heuristic&lt;/h2&gt;
+&lt;p&gt;This heuristic is nicely explained in &lt;a class="reference external" href="https://www.youtube.com/watch?v=lkL6RkQvpMM"&gt;this video&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;It heuristic has 3 cases:&lt;/p&gt;
+&lt;ol class="arabic"&gt;
+&lt;li&gt;&lt;p&gt;the matching pattern suffix exists in another pattern place:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P: A B C D B C&lt;/pre&gt;
+&lt;p&gt;&lt;cite&gt;BC&lt;/cite&gt; matches the text and another &lt;cite&gt;BC&lt;/cite&gt; is in the pattern at position &lt;cite&gt;1&lt;/cite&gt;.
+Thus we could shift the pattern by &lt;cite&gt;3&lt;/cite&gt; positions right:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:       A B C D B C&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;the matching pattern suffix is also the prefix of a pattern:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P: B C D A B C&lt;/pre&gt;
+&lt;p&gt;In this case we can safely shift the pattern by &lt;cite&gt;4&lt;/cite&gt; positions:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:         B C D A B C&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;When none of the above cases are satisfied the pattern is shifted past
+the matched text part:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:     D A B C
+
+   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:             D A B C&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;This heuristic also has a preprocessing step to construct a lookup table.
+The algorithm is a bit more complicated and better explained in &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f6" id="footnote-reference-5" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;6&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt; &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#f5" id="footnote-reference-6" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;5&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-3"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www-igm.univ-mlv.fr/~lecroq/string/node14.html"&gt;http://www-igm.univ-mlv.fr/~lecroq/string/node14.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-1"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html"&gt;https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f3" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-2"&gt;3&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm"&gt;https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f4" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-4"&gt;4&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.geeksforgeeks.org/pattern-searching-set-7-boyer-moore-algorithm-bad-character-heuristic/"&gt;http://www.geeksforgeeks.org/pattern-searching-set-7-boyer-moore-algorithm-bad-character-heuristic/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f5" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-6"&gt;5&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.inf.fh-flensburg.de/lang/algorithmen/pattern/bmen.htm"&gt;http://www.inf.fh-flensburg.de/lang/algorithmen/pattern/bmen.htm&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f6" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boyer-moore-string-search/#footnote-reference-5"&gt;6&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.geeksforgeeks.org/boyer-moore-algorithm-good-suffix-heuristic/"&gt;http://www.geeksforgeeks.org/boyer-moore-algorithm-good-suffix-heuristic/&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;</description><category>algorithms</category><category>string-search</category><guid>http://blog.povilasb.com/posts/boyer-moore-string-search/</guid><pubDate>Thu, 10 Aug 2017 07:05:28 GMT</pubDate></item></channel></rss>

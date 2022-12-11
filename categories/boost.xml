@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about boost)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/boost.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Boost dependency analyzer</title><link>http://blog.povilasb.com/posts/boost-deps-analyzer/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;section id="boost-dependency-analyzer"&gt;
+&lt;h2&gt;Boost Dependency Analyzer&lt;/h2&gt;
+&lt;p&gt;Boost dependency analyzer is a tool that analyzes and visualizes Boost library
+dependencies &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#f1" id="footnote-reference-1" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;1&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;. Unfortunately it has not been open sourced although
+available for download for free. There's Windows and Linux binaries available.&lt;/p&gt;
+&lt;img alt="/images/boost_deps_analyzer.png" src="http://blog.povilasb.com/images/boost_deps_analyzer.png"&gt;
+&lt;p&gt;Let's run this tool on Debian wheezy. We will need some version of Boost
+sources, QT 5 libraries and Boost dependency analyzer itself.&lt;/p&gt;
+&lt;section id="download-latest-boost"&gt;
+&lt;h3&gt;Download latest Boost&lt;/h3&gt;
+&lt;p&gt;By the time a wrote this document latest stable Boost version was 1.57.0.
+Download it from here &lt;a class="reference external" href="http://sourceforge.net/projects/boost/files/boost/1.57.0/"&gt;http://sourceforge.net/projects/boost/files/boost/1.57.0/&lt;/a&gt;
+and extract the archive.&lt;/p&gt;
+&lt;p&gt;Before continuing let's compile
+&lt;a class="reference external" href="http://www.boost.org/doc/libs/1_57_0/tools/bcp/doc/html/index.html"&gt;BCP&lt;/a&gt; tool.
+It will be used to detect the dependencies.
+In boost sources root directory run:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ./bootstrap.sh
+$ ./b2 tools/bcp&lt;/pre&gt;
+&lt;p&gt;BCP will be compiled to something like
+&lt;cite&gt;$(boost_roo_dir)/bin.v2/tools/bcp/gcc-4.7/release/link-static&lt;/cite&gt;.
+This is the directory where you'll locate BCP executable when running
+Boost dependency analyzer tool.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="download-boost-deps-analyzer"&gt;
+&lt;h3&gt;Download Boost deps analyzer&lt;/h3&gt;
+&lt;pre class="literal-block"&gt;$ cd /tmp
+$ wget http://www.meetingcpp.com/tl_files/tools/boostdependencygui_linux.zip
+$ unzipt -e boostdependencygui_linux.zip
+$ cd boostdependencygui
+$ chmod +x boostdependencygui&lt;/pre&gt;
+&lt;p&gt;Boost dependency analyzer comes with binary compiled for i386 architectures.
+Before running it we need to install dependency packages first which provide
+required libraries.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="prerequisites"&gt;
+&lt;h3&gt;Prerequisites&lt;/h3&gt;
+&lt;p&gt;Debian packages:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;p&gt;libqt5widgets5:i386&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;libqt5sql5:i386&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To install i386 packages we must add i386 to the dpkg architecture list:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ dpkg --add-architecture i386
+$ sudo apt-get update&lt;/pre&gt;
+&lt;p&gt;Now we can install i386 packages:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ sudo apt-get install libqt5widgets5:i386 libqt5sql5:i386&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="running-the-analyzer"&gt;
+&lt;h3&gt;Running the analyzer&lt;/h3&gt;
+&lt;p&gt;Boost dependency analyzer comes with some compiled libraries. Unfortunately
+it fails to load them. Let's patch LD_LIBRARY_PATH:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ export LD_LIBRARY_PATH=/tmp/boostdependencygui&lt;/pre&gt;
+&lt;p&gt;Also those libraries have different names than the executable expects. Let's
+create symlinks to fix this:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ln -s libGraphLayout.so.1.0.0 libGraphLayout.so.1
+$ ln -s libProcessSinkLib.so.1.0.0 libProcessSinkLib.so.1&lt;/pre&gt;
+&lt;p&gt;Now we should be able to run the analyzer tool:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd /tmp/boostdependencygui
+$ ./boostdependencygui&lt;/pre&gt;
+&lt;p&gt;From GUI menu select Dependencies-&amp;gt;Read dependencies, locate directory
+where you've extracted Boost libraries archive and press Open. Then locate
+where you've compiled BCP tool. After this analyzer should start processing,
+when it's done you can view the dependencies graph &lt;a class="footnote-reference brackets" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#f2" id="footnote-reference-2" role="doc-noteref"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;2&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p class="rubric"&gt;References&lt;/p&gt;
+&lt;aside class="footnote-list brackets"&gt;
+&lt;aside class="footnote brackets" id="f1" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#footnote-reference-1"&gt;1&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.meetingcpp.com/index.php/br/items/boost-dependency-analyzer.html"&gt;http://www.meetingcpp.com/index.php/br/items/boost-dependency-analyzer.html&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;aside class="footnote brackets" id="f2" role="note"&gt;
+&lt;span class="label"&gt;&lt;span class="fn-bracket"&gt;[&lt;/span&gt;&lt;a role="doc-backlink" href="http://blog.povilasb.com/posts/boost-deps-analyzer/#footnote-reference-2"&gt;2&lt;/a&gt;&lt;span class="fn-bracket"&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://www.youtube.com/watch?v=4yZG8gbw0sQ#t=10"&gt;https://www.youtube.com/watch?v=4yZG8gbw0sQ#t=10&lt;/a&gt;&lt;/p&gt;
+&lt;/aside&gt;
+&lt;/aside&gt;
+&lt;/section&gt;
+&lt;/section&gt;</description><category>boost</category><category>cpp</category><guid>http://blog.povilasb.com/posts/boost-deps-analyzer/</guid><pubDate>Sun, 30 Nov 2014 11:34:00 GMT</pubDate></item></channel></rss>

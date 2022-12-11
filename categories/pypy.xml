@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about pypy)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/pypy.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Building PyPy is easy</title><link>http://blog.povilasb.com/posts/building-pypy-is-easy/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;The moment I saw a &lt;a class="reference external" href="https://morepypy.blogspot.lt/2017/03/async-http-benchmarks-on-pypy3.html?spref=tw"&gt;benchmark on PyPy 3.5&lt;/a&gt;
+I was eager to test it.
+PyPy 3.5 support is still in development so I had to build it before trying it.&lt;/p&gt;
+&lt;p&gt;PyPy is hosted on bitbucket &lt;a class="reference external" href="https://bitbucket.org/pypy/pypy"&gt;https://bitbucket.org/pypy/pypy&lt;/a&gt; and thus requires
+mercurial to clone it:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ apt install mercurial
+$ hg clone https://bitbucket.org/pypy/pypy&lt;/pre&gt;
+&lt;p&gt;Now let's checkout the &lt;cite&gt;py3.5&lt;/cite&gt; branch:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd pypy
+$ hg up py3.5&lt;/pre&gt;
+&lt;p&gt;Before building the &lt;cite&gt;pypy&lt;/cite&gt; I had some missing dependencies on my Debian 8
+system:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ apt install pypy libbz2-dev libexpat1-dev libffi-dev pkg-config libncurses5-dev&lt;/pre&gt;
+&lt;p&gt;Yes, &lt;cite&gt;pypy&lt;/cite&gt; build process requires an older version of &lt;cite&gt;pypy&lt;/cite&gt; :D
+Although, docs say that &lt;a class="reference external" href="http://doc.pypy.org/en/latest/build.html"&gt;it should be possible to build i with CPython&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Anyway, now we're ready to build the &lt;cite&gt;pypy&lt;/cite&gt; and that's as easy as executing:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ rpython/bin/rpython -Ojit pypy/goal/targetpypystandalone.py&lt;/pre&gt;
+&lt;p&gt;Eventually, on my computer after 37 minutes, there will be &lt;cite&gt;pypy-c&lt;/cite&gt; which
+is your Python interpreter/JIT.&lt;/p&gt;</description><category>pypy</category><category>python</category><guid>http://blog.povilasb.com/posts/building-pypy-is-easy/</guid><pubDate>Fri, 03 Mar 2017 05:35:21 GMT</pubDate></item></channel></rss>

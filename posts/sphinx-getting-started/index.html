@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting started with Sphinx | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/sphinx-getting-started/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="next" href="../cpp-googletest-intro/" title="C++ unit tests with googletest" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Getting started with Sphinx">
+<meta property="og:url" content="http://blog.povilasb.com/posts/sphinx-getting-started/">
+<meta property="og:description" content="Sphinx is a tool written in Python that automatically generates documentation
+from reST (restructured text) files.
+Some popular libraries, tools using Sphinx:
+
+OpenCV http://docs.opencv.org/.
+Jinja ht">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2014-02-21T19:18:00+02:00">
+<meta property="article:tag" content="docs">
+<meta property="article:tag" content="python">
+<meta property="article:tag" content="sphinx">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Getting started with Sphinx</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2014-02-21T19:18:00+02:00" itemprop="datePublished" title="2014-02-21 19:18">2014-02-21 19:18</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Sphinx is a tool written in Python that automatically generates documentation
+from reST (restructured text) files.</p>
+<p>Some popular libraries, tools using Sphinx:</p>
+<ul class="simple">
+<li><p>OpenCV <a class="reference external" href="http://docs.opencv.org/">http://docs.opencv.org/</a>.</p></li>
+<li><p>Jinja <a class="reference external" href="http://jinja.pocoo.org/docs/">http://jinja.pocoo.org/docs/</a>.</p></li>
+<li><p>Buildbot <a class="reference external" href="http://docs.buildbot.net/">http://docs.buildbot.net/</a></p></li>
+<li><p>Fabric <a class="reference external" href="http://docs.fabfile.org">http://docs.fabfile.org</a>.</p></li>
+</ul>
+<p>In this article I'll show you how to:</p>
+<ol class="arabic simple">
+<li><p>Setup the environment.</p></li>
+<li><p>Create simple reST files.</p></li>
+<li><p>Generate HTML documents from reST.</p></li>
+</ol>
+<p>Get the sample project from github
+<a class="reference external" href="https://github.com/povilasb-com/sphinx-first-steps">https://github.com/povilasb-com/sphinx-first-steps</a>.</p>
+<section id="setup-the-environment"><h2>Setup the environment</h2>
+<p>I'll be using Debian 7.3 system. Get the neccessary packages:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_5293e3e67cc64a3b91cafd2310294e5c-1" name="rest_code_5293e3e67cc64a3b91cafd2310294e5c-1" href="#rest_code_5293e3e67cc64a3b91cafd2310294e5c-1"></a>sudo apt-get install sphinx-doc
+</pre></div>
+<p>Build initial project structure:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_532571af7fe94875a6932ef020c2eb6d-1" name="rest_code_532571af7fe94875a6932ef020c2eb6d-1" href="#rest_code_532571af7fe94875a6932ef020c2eb6d-1"></a>sphinx-quickstart
+</pre></div>
+<p>You will be prompted with many options. For the start I advise you to choose
+the default ones except for "Separate source and build directories" choose
+"Yes". This way you'll have a nice project structure with separated source
+and build directories:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_130995200dde4702addeddeca4241d8e-1" name="rest_code_130995200dde4702addeddeca4241d8e-1" href="#rest_code_130995200dde4702addeddeca4241d8e-1"></a>$ ls
+<a id="rest_code_130995200dde4702addeddeca4241d8e-2" name="rest_code_130995200dde4702addeddeca4241d8e-2" href="#rest_code_130995200dde4702addeddeca4241d8e-2"></a>./build Makefile ./source
+</pre></div>
+</section><section id="create-simple-rest-files"><h2>Create simple reST files</h2>
+<p>"reStructuredText is plaintext that uses simple and intuitive constructs to
+indicate the structure of a document." <a class="footnote-reference brackets" href="#f2" id="footnote-reference-1" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> Let's create a simple
+documentation consisting of two pages: <strong>main</strong> and <strong>contact</strong> pages.
+File structure would look like this:</p>
+<pre class="literal-block">$tree .
+.
+|__ build
+|__ Makefile
+|__ source
+   |__ conf.py
+   |__ index.rst
+   |__ misc
+      |__ contact.rst</pre>
+<section id="main-page"><h3>Main page</h3>
+<p>By default the first page loaded is index.rst (it might be changed in conf.py).
+You might want to put brief description and table of contents into this page:</p>
+<pre class="literal-block">=====
+Intro
+=====
+
+This is an index page of my documentation generated with Sphinx.
+Checkout TOC for further info.
+
+Content
+=======
+
+.. toctree::
+
+        Contacts &lt;misc/contact.rst&gt;</pre>
+</section><section id="contacts-page"><h3>Contacts page</h3>
+<p>This page might be as simple as a single table:</p>
+<pre class="literal-block">==========
+Contact us
+==========
+
++--------------+---------------+
+| Mobile phone | +1xxxxxxx     |
++--------------+---------------+
+| Email        + info@mail.com |
++--------------+---------------+</pre>
+</section></section><section id="generate-html-documents-from-rest"><h2>Generate HTML documents from reST</h2>
+<p>To genera html document from reST files simply invoke for the Makefile
+generated by <em>sphinx-quickstart</em>:</p>
+<div class="code"><pre class="code bash"><a id="rest_code_c80bdff72a3444f29e8e807732aee4a4-1" name="rest_code_c80bdff72a3444f29e8e807732aee4a4-1" href="#rest_code_c80bdff72a3444f29e8e807732aee4a4-1"></a>make html
+</pre></div>
+<p>This will build documentation in <em>./build/html</em>. Open <em>./build/html/index.html</em>
+in your browser to check it out.</p>
+<p class="rubric">References</p>
+<aside class="footnote-list brackets"><aside class="footnote brackets" id="f1" role="note"><span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://sphinx-doc.org/tutorial.html">http://sphinx-doc.org/tutorial.html</a></p>
+</aside><aside class="footnote brackets" id="f2" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-1">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html">http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html</a></p>
+</aside><aside class="footnote brackets" id="f3" role="note"><span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://sphinx-doc.org/rest.html">http://sphinx-doc.org/rest.html</a></p>
+</aside></aside></section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/docs/" rel="tag">docs</a></li>
+            <li><a class="tag p-category" href="../../categories/python/" rel="tag">python</a></li>
+            <li><a class="tag p-category" href="../../categories/sphinx/" rel="tag">sphinx</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="next">
+                <a href="../cpp-googletest-intro/" rel="next" title="C++ unit tests with googletest">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

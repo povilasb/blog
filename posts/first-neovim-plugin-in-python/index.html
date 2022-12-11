@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First Neovim plugin in Python | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../building-pypy-is-easy/" title="Building PyPy is easy" type="text/html">
+<link rel="next" href="../rust-first-steps/" title="Rust - First Steps" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="First Neovim plugin in Python">
+<meta property="og:url" content="http://blog.povilasb.com/posts/first-neovim-plugin-in-python/">
+<meta property="og:description" content="For some time I was (and still am) eager to write a Neovim plugin that
+would help me draw ASCII diagrams.
+Neovim provides msgpack based RPC API which allows to communicate with
+editor over TCP/IP, Uni">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-04-16T11:23:23+03:00">
+<meta property="article:tag" content="neovim">
+<meta property="article:tag" content="neovim-plugin">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">First Neovim plugin in Python</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2017-04-16T11:23:23+03:00" itemprop="datePublished" title="2017-04-16 11:23">2017-04-16 11:23</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>For some time I was (and still am) eager to write a Neovim plugin that
+would help me draw ASCII diagrams.</p>
+<p>Neovim provides msgpack based RPC API which allows to communicate with
+editor over TCP/IP, Unix socket or pipe.
+Thus writing plugins in any language is possible.
+I used Python library implementing the API:
+<a class="reference external" href="https://github.com/neovim/python-client">https://github.com/neovim/python-client</a>.</p>
+<section id="controlling-neovim-instance"><h2>Controlling Neovim Instance</h2>
+<p>There are couple of ways how we can connect Python based plugin with
+Neovim.
+The easiest way is to start Neovim with specified Unix socket:</p>
+<pre class="literal-block">$ NVIM_LISTEN_ADDRESS=/tmp/nvim nvim</pre>
+<p>Now we can connect to Neovim instance from Python:</p>
+<div class="code"><pre class="code python"><a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-1" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-1" href="#rest_code_d8830a6df07b4f598bca7c1f707aa055-1"></a><span class="kn">import</span> <span class="nn">neovim</span>
+<a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-2" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-2" href="#rest_code_d8830a6df07b4f598bca7c1f707aa055-2"></a>
+<a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-3" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-3" href="#rest_code_d8830a6df07b4f598bca7c1f707aa055-3"></a><span class="n">vim</span> <span class="o">=</span> <span class="n">neovim</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="s1">'socket'</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s1">'/tmp/nvim'</span><span class="p">)</span>
+<a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-4" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-4" href="#rest_code_d8830a6df07b4f598bca7c1f707aa055-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">vim</span><span class="o">.</span><span class="n">current</span><span class="o">.</span><span class="n">line</span><span class="p">)</span>
+<a id="rest_code_d8830a6df07b4f598bca7c1f707aa055-5" name="rest_code_d8830a6df07b4f598bca7c1f707aa055-5" href="#rest_code_d8830a6df07b4f598bca7c1f707aa055-5"></a><span class="n">vim</span><span class="o">.</span><span class="n">current</span><span class="o">.</span><span class="n">line</span> <span class="o">=</span> <span class="s1">'New line'</span>
+</pre></div>
+</section><section id="python-client-api"><h2>python-client API</h2>
+<p><a class="reference external" href="https://github.com/neovim/python-client">Neovim python</a> API is not documented.
+While playing with it, I found some useful commands:</p>
+<pre class="literal-block">vim.current.line
+    Currently selected line content.
+
+vim.eval('line(".")')
+    Currently selected line number. Line indexes start from 1.
+
+vim.eval('col(".")')
+    Currently selected column number. Column indexes start from 1.
+
+vim.current.buffer
+    Currently visible Neovim buffer.
+
+buffer.append(line: str, index: int=-1) -&gt; None
+    Inserts specified line to the buffer.
+
+    index - index of a line after which new line will be inserted.
+        0 - inserts first line.
+        -1 - inserts last line.</pre>
+</section><section id="configure-neovim-to-load-plugin"><h2>Configure Neovim to Load Plugin</h2>
+<p>We can tell Neovim to automatically load our Python based plugin.
+First of all our plugin must expose implement required API:</p>
+<div class="code"><pre class="code python"><a id="rest_code_c622f95745dd401cace41682f67378e0-1" name="rest_code_c622f95745dd401cace41682f67378e0-1" href="#rest_code_c622f95745dd401cace41682f67378e0-1"></a><span class="kn">import</span> <span class="nn">neovim</span>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-2" name="rest_code_c622f95745dd401cace41682f67378e0-2" href="#rest_code_c622f95745dd401cace41682f67378e0-2"></a>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-3" name="rest_code_c622f95745dd401cace41682f67378e0-3" href="#rest_code_c622f95745dd401cace41682f67378e0-3"></a><span class="nd">@neovim</span><span class="o">.</span><span class="n">plugin</span>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-4" name="rest_code_c622f95745dd401cace41682f67378e0-4" href="#rest_code_c622f95745dd401cace41682f67378e0-4"></a><span class="k">class</span> <span class="nc">TestPlugin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-5" name="rest_code_c622f95745dd401cace41682f67378e0-5" href="#rest_code_c622f95745dd401cace41682f67378e0-5"></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vim</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-6" name="rest_code_c622f95745dd401cace41682f67378e0-6" href="#rest_code_c622f95745dd401cace41682f67378e0-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">vim</span> <span class="o">=</span> <span class="n">vim</span>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-7" name="rest_code_c622f95745dd401cace41682f67378e0-7" href="#rest_code_c622f95745dd401cace41682f67378e0-7"></a>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-8" name="rest_code_c622f95745dd401cace41682f67378e0-8" href="#rest_code_c622f95745dd401cace41682f67378e0-8"></a>    <span class="nd">@neovim</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s1">'TestCommand'</span><span class="p">)</span>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-9" name="rest_code_c622f95745dd401cace41682f67378e0-9" href="#rest_code_c622f95745dd401cace41682f67378e0-9"></a>    <span class="k">def</span> <span class="nf">alter_current_line</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="rest_code_c622f95745dd401cace41682f67378e0-10" name="rest_code_c622f95745dd401cace41682f67378e0-10" href="#rest_code_c622f95745dd401cace41682f67378e0-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">vim</span><span class="o">.</span><span class="n">current</span><span class="o">.</span><span class="n">line</span> <span class="o">=</span> <span class="s1">'New line'</span>
+</pre></div>
+<p>This test plugin defines new Neovim command which simply overwrites current
+line.</p>
+<p>Now to make Neovim load the plugin:</p>
+<ol class="arabic simple">
+<li><p>Place it in <cite>~/.config/nvim/rplugin/python3</cite>.</p></li>
+<li><p>Open Neovim and issue <cite>:UpdateRemotePlugins</cite> command.</p></li>
+<li><p>Restart Neovim.</p></li>
+</ol>
+<p>Now select some line, press <cite>ESC</cite> and type <cite>:TestCommand</cite>.
+It should overwrite the line with "New Line".</p>
+</section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/neovim/" rel="tag">neovim</a></li>
+            <li><a class="tag p-category" href="../../categories/neovim-plugin/" rel="tag">neovim-plugin</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../building-pypy-is-easy/" rel="prev" title="Building PyPy is easy">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../rust-first-steps/" rel="next" title="Rust - First Steps">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

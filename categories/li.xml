@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about li)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/li.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Showterm server installation (Debian, Nginx, PostgreSQL)</title><link>http://blog.povilasb.com/posts/showterm-server-installation/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;Showterm is a set of open source applications for terminal I/O recording and
+playback. It consists of client and server applications. Both of them are
+hosted on github. You can find easy instructions how to install showterm client
+on &lt;a class="reference external" href="http://showterm.io/"&gt;http://showterm.io/&lt;/a&gt;. Unfortunately, there are no instructions how to install
+the server software.&lt;/p&gt;
+&lt;p&gt;This tutorial demonstrates how to install showterm server on debian systems
+running Nginx web server and PostgreSQL database.&lt;/p&gt;
+&lt;aside class="admonition note"&gt;
+&lt;p class="admonition-title"&gt;Note&lt;/p&gt;
+&lt;p&gt;I've also successfully tested the server together with MySQL database.&lt;/p&gt;
+&lt;/aside&gt;
+&lt;section id="about-showterm-server"&gt;
+&lt;h2&gt;About Showterm server&lt;/h2&gt;
+&lt;p&gt;Showterm server is &lt;a class="reference external" href="http://rubyonrails.org/"&gt;Ruby on Rails&lt;/a&gt; application.
+Showterm stores it's "videos" in a database. Specific database might be selected
+by editind the &lt;em&gt;database.yml&lt;/em&gt; config file. This should be straighforward for
+Ruby on Rails developers. For others like me we'll see later how to do this.&lt;/p&gt;
+&lt;iframe width="100%" height="480" src="http://show.povilasb.com/f1cba221048ef40ce8222#fast"&gt;&lt;/iframe&gt;&lt;/section&gt;
+&lt;section id="setup-postgresql"&gt;
+&lt;h2&gt;Setup PostgreSQL&lt;/h2&gt;
+&lt;ol class="arabic"&gt;
+&lt;li&gt;&lt;p&gt;Get the necessary Debian packages:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ sudo apt-get install postgresql-9.1 postgresql-server-dev-9.1&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Create PostgreSQL user and database dedicated to showterm server:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ su postgres
+$ psql
+postgres=# create database showterm;
+postgres=# create user showterm with password 'showterm';
+postgres=# grant all privileges on database "showterm" to showterm;
+postgres=# \q&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Above instructions create database "showterm", user "showterm" with password
+"showterm".&lt;/p&gt;
+&lt;ol class="arabic" start="3"&gt;
+&lt;li&gt;&lt;p&gt;Update PostgreSQL &lt;a class="reference external" href="http://www.postgresql.org/docs/9.1/static/auth-methods.html"&gt;authentification settings&lt;/a&gt; to allow
+Ruby on Rails to connect to &lt;em&gt;showterm&lt;/em&gt; database.
+Authetification configs are located in
+&lt;em&gt;/etc/postgresql/9.1/main/pg_hba.conf&lt;/em&gt;. Append new entry:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# TYPE  DATABASE        USER       ADDRESS        METHOD
+local   showterm        showterm                  md5&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now restart the computer to apply the new settings.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="install-showterm-server"&gt;
+&lt;h2&gt;Install Showterm server&lt;/h2&gt;
+&lt;ol class="arabic"&gt;
+&lt;li&gt;&lt;p&gt;Get necessary Debian packages:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ # Add unstable repo, it has ruby 2.0 packages.
+$ sudo echo "deb ftp://ftp.debian.org/debian/ unstable main contrib non-free" /etc/apt/sources.list.d/unstable.list
+$ sudo apt-get update
+$ sudo apt-get install ruby2.0 ruby2.0-dev gcc libc6-dev nodejs&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;gcc and libc6-dev packages required to build some native ruby packages.&lt;/p&gt;
+&lt;ol class="arabic" start="2"&gt;
+&lt;li&gt;&lt;p&gt;Get server software from github:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ git clone git@github.com:povilasb/showterm.io.git
+$ cd showterm.io
+$ git checkout debian&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Install ruby Gems (this must be run in directory where you cloned Showterm):&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ gem2.0 install bundle
+$ bundle install&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Setup PostgreSQL database &lt;em&gt;showterm&lt;/em&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ rake2.0 db:setup&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Run the Showterm application:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ rails serve&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now our application runs on port &lt;strong&gt;3000&lt;/strong&gt; by default. Let's configure nginx
+to redirect some domain to &lt;em&gt;http://localhost:3000&lt;/em&gt;.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="setup-nginx"&gt;
+&lt;h2&gt;Setup Nginx&lt;/h2&gt;
+&lt;ol class="arabic"&gt;
+&lt;li&gt;&lt;p&gt;Get Nginx package:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ sudo apt-get install nginx&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Add virtual host for showterm. Create a new virtual host file. E.g.
+&lt;em&gt;/etc/nginx/sites-available/show.example.com&lt;/em&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;server
+{
+        listen 80;
+        server_name show.example.com;
+
+        index index.html;
+        location / {
+                proxy_pass http://localhost:3000;
+        }
+}&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now enable this virtual host:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ln -s /etc/nginx/sites-available/show.example.com /etc/nginx/sites-enabled/show.example.com&lt;/pre&gt;
+&lt;p&gt;Reload Nginx configs:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ nginx -s reload&lt;/pre&gt;
+&lt;p&gt;That's it. Now you should be able to open Showterm server application in
+your Web browser with &lt;em&gt;http://show.example.com&lt;/em&gt;.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="configure-showterm-client"&gt;
+&lt;h2&gt;Configure Showterm client&lt;/h2&gt;
+&lt;p&gt;By default Showterm client sends it's recorded stream to &lt;a class="reference external" href="http://showterm.io"&gt;http://showterm.io&lt;/a&gt;.
+In order to make it send to your own server, simply append a line to
+&lt;em&gt;~/.bashrc&lt;/em&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ export SHOWTERM_SERVER=http://show.example.com&lt;/pre&gt;
+&lt;p&gt;For this to work you have to restart the terminal.&lt;/p&gt;
+&lt;/section&gt;</description><category>li</category><category>linux</category><category>showterm.</category><guid>http://blog.povilasb.com/posts/showterm-server-installation/</guid><pubDate>Mon, 18 Aug 2014 07:35:00 GMT</pubDate></item></channel></rss>

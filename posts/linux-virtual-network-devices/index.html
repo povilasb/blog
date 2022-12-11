@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linux virtual network devices | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/linux-virtual-network-devices/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../systemd-execute-bash-script-on-start/" title="systemd: execute bash script on start" type="text/html">
+<link rel="next" href="../linux-network-routing-table/" title="Linux network routing table" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Linux virtual network devices">
+<meta property="og:url" content="http://blog.povilasb.com/posts/linux-virtual-network-devices/">
+<meta property="og:description" content="Linux allows us to create virtual network devices and control them
+programmaticaly. We can read and produce raw IP or Ethernet packets.
+Such devices are called TUN or TAP and often referred to as TUN/">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-08-22T21:28:32+03:00">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="networking">
+<meta property="article:tag" content="python">
+<meta property="article:tag" content="tap">
+<meta property="article:tag" content="tun">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Linux virtual network devices</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2017-08-22T21:28:32+03:00" itemprop="datePublished" title="2017-08-22 21:28">2017-08-22 21:28</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Linux allows us to create virtual network devices and control them
+programmaticaly. We can read and produce raw IP or Ethernet packets.
+Such devices are called TUN or TAP and often referred to as TUN/TAP.
+TUN device is used to manipulate IP packets, TAP - Ethernet <a class="footnote-reference brackets" href="#f1" id="footnote-reference-1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+<p>TUN/TAP has a lot of uses: we can inspect, modify, generate, etc. network
+packets. OpenVPN uses TUN/TAP to route all packets through proxy server.
+Thus we can use TUN/TAP to create misc VPN services, e.g. IP over DNS <a class="footnote-reference brackets" href="#f2" id="footnote-reference-2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>
+<a class="footnote-reference brackets" href="#f3" id="footnote-reference-3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.</p>
+<section id="overview"><h2>Overview</h2>
+<pre class="literal-block">+------+              +------------+          +------+
+| eth0 |  &lt;--------&gt;  | Networking | &lt;------&gt; | tun0 |
++------+              |    stack   |          +------+
+                      +------------+             ^
+                                                 |
+                                                 |
+                                                 V
+                                          +-------------+
+                                          | Application |
+                                          +-------------+</pre>
+<p><cite>tun0</cite> is virtual network device interface. It acts just like a regular
+interface. Except we can hook to it and control it from userspace application.</p>
+<p>When application writes packets to <cite>tun0</cite>, they will be put to networking
+stack and treated as if they came from a regular NIC.
+When packets arrive to networking stack with destination address that is
+routed to <cite>tun0</cite>, they will be forwarded to userspace application.</p>
+</section><section id="create-tun-device-from-cli"><h2>Create TUN device from CLI</h2>
+<p>We can use <cite>ip</cite> CLI command to setup the TUN device:</p>
+<pre class="literal-block"># ip tuntap add mode tun tun0
+# ip addr add 10.0.0.1/24 dev tun0
+# ip link set tun0 up</pre>
+<p>Then the resulting routing table looks like:</p>
+<pre class="literal-block"># route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.0.1     0.0.0.0         UG    600    0        0 wlp3s0
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0</pre>
+<p>Which means that the packets with destination <cite>10.0.0.X</cite> will be forwarded
+to <cite>tun0</cite> interface.</p>
+</section><section id="create-tun-device-with-python"><h2>Create TUN device with Python</h2>
+<p>The syscalls used by <cite>ip tuntap</cite> command might be called programmatically from
+any language including Python.
+To create TUN device we need to open <cite>/dev/net/tun</cite> and call <a class="reference external" href="https://docs.python.org/3/library/fcntl.html#fcntl.ioctl">ioctl()</a> with specific
+parameters:</p>
+<div class="code"><pre class="code python"><a id="rest_code_f394665351d4429b8efa6186a10d9d16-1" name="rest_code_f394665351d4429b8efa6186a10d9d16-1" href="#rest_code_f394665351d4429b8efa6186a10d9d16-1"></a><span class="kn">import</span> <span class="nn">os</span>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-2" name="rest_code_f394665351d4429b8efa6186a10d9d16-2" href="#rest_code_f394665351d4429b8efa6186a10d9d16-2"></a><span class="kn">from</span> <span class="nn">fcntl</span> <span class="kn">import</span> <span class="n">ioctl</span>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-3" name="rest_code_f394665351d4429b8efa6186a10d9d16-3" href="#rest_code_f394665351d4429b8efa6186a10d9d16-3"></a><span class="kn">import</span> <span class="nn">struct</span>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-4" name="rest_code_f394665351d4429b8efa6186a10d9d16-4" href="#rest_code_f394665351d4429b8efa6186a10d9d16-4"></a>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-5" name="rest_code_f394665351d4429b8efa6186a10d9d16-5" href="#rest_code_f394665351d4429b8efa6186a10d9d16-5"></a><span class="n">TUNSETIFF</span> <span class="o">=</span> <span class="mh">0x400454ca</span>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-6" name="rest_code_f394665351d4429b8efa6186a10d9d16-6" href="#rest_code_f394665351d4429b8efa6186a10d9d16-6"></a><span class="n">IFF_TUN</span>   <span class="o">=</span> <span class="mh">0x0001</span>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-7" name="rest_code_f394665351d4429b8efa6186a10d9d16-7" href="#rest_code_f394665351d4429b8efa6186a10d9d16-7"></a><span class="n">IFF_NO_PI</span> <span class="o">=</span> <span class="mh">0x1000</span>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-8" name="rest_code_f394665351d4429b8efa6186a10d9d16-8" href="#rest_code_f394665351d4429b8efa6186a10d9d16-8"></a>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-9" name="rest_code_f394665351d4429b8efa6186a10d9d16-9" href="#rest_code_f394665351d4429b8efa6186a10d9d16-9"></a><span class="n">ftun</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">"/dev/net/tun"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">O_RDWR</span><span class="p">)</span>
+<a id="rest_code_f394665351d4429b8efa6186a10d9d16-10" name="rest_code_f394665351d4429b8efa6186a10d9d16-10" href="#rest_code_f394665351d4429b8efa6186a10d9d16-10"></a><span class="n">ioctl</span><span class="p">(</span><span class="n">ftun</span><span class="p">,</span> <span class="n">TUNSETIFF</span><span class="p">,</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">"16sH"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">"tun0"</span><span class="p">,</span> <span class="n">IFF_TUN</span> <span class="o">|</span> <span class="n">IFF_NO_PI</span><span class="p">))</span>
+</pre></div>
+<p>However, this is pretty low level and suits my learning needs very well.
+Although, we can definitely find some python libraries for this <a class="footnote-reference brackets" href="#f5" id="footnote-reference-4" role="doc-noteref"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></a> <a class="footnote-reference brackets" href="#f6" id="footnote-reference-5" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a>.</p>
+<p>Also, we can programmatically set up routes using <a class="reference external" href="https://en.wikipedia.org/wiki/Netlink">Netlink</a> based protocols.
+Fortunately there's a python package <a class="reference external" href="https://pypi.python.org/pypi/pyroute2">pyroute2</a> implementing Netlink.
+For example we can assign an IP address to TUN interface and bring up:</p>
+<div class="code"><pre class="code python"><a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-1" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-1" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-1"></a><span class="c1"># pip install pyroute2==0.4.19</span>
+<a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-2" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-2" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-2"></a><span class="kn">from</span> <span class="nn">pyroute2</span> <span class="kn">import</span> <span class="n">IPRoute</span>
+<a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-3" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-3" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-3"></a>
+<a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-4" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-4" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-4"></a><span class="n">ip</span> <span class="o">=</span> <span class="n">IPRoute</span><span class="p">()</span>
+<a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-5" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-5" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-5"></a><span class="n">idx</span> <span class="o">=</span> <span class="n">ip</span><span class="o">.</span><span class="n">link_lookup</span><span class="p">(</span><span class="n">ifname</span><span class="o">=</span><span class="s1">'tun0'</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-6" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-6" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-6"></a><span class="n">ip</span><span class="o">.</span><span class="n">addr</span><span class="p">(</span><span class="s1">'add'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span> <span class="n">address</span><span class="o">=</span><span class="s1">'10.0.0.1'</span><span class="p">,</span> <span class="n">prefixlen</span><span class="o">=</span><span class="mi">24</span><span class="p">)</span>
+<a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-7" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-7" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-7"></a><span class="n">ip</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="s1">'set'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="s1">'up'</span><span class="p">)</span>
+<a id="rest_code_9a388a58603f4de69a63c2da77ef3b64-8" name="rest_code_9a388a58603f4de69a63c2da77ef3b64-8" href="#rest_code_9a388a58603f4de69a63c2da77ef3b64-8"></a><span class="n">ip</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</section><section id="controlling-tun-tap-device"><h2>Controlling TUN/TAP device</h2>
+<p>Once we have created and enabled <cite>tun0</cite> interface we can receive and send
+raw IP or Ethernet packets, respectively.</p>
+<section id="receiving-packets"><h3>Receiving packets</h3>
+<p>Let's start sending ICMP requests to <cite>10.0.0.4</cite> which gets routed to our
+TUN device:</p>
+<pre class="literal-block">$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.0.1     0.0.0.0         UG    600    0        0 wlp3s0
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0
+192.168.0.0     0.0.0.0         255.255.255.0   U     600    0        0 wlp3s0
+
+$ ping 10.0.0.4</pre>
+<p>Then we can receive those packets with a simple read:</p>
+<div class="code"><pre class="code python"><a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-1" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-1" href="#rest_code_25edf3f069ce494a89fa3d6c32920f82-1"></a><span class="kn">import</span> <span class="nn">os</span>
+<a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-2" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-2" href="#rest_code_25edf3f069ce494a89fa3d6c32920f82-2"></a>
+<a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-3" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-3" href="#rest_code_25edf3f069ce494a89fa3d6c32920f82-3"></a><span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+<a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-4" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-4" href="#rest_code_25edf3f069ce494a89fa3d6c32920f82-4"></a>    <span class="n">raw_packet</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">ftun</span><span class="p">,</span> <span class="mi">1500</span><span class="p">)</span> <span class="c1"># we get ftun descriptor by opening /dev/net/tun</span>
+<a id="rest_code_25edf3f069ce494a89fa3d6c32920f82-5" name="rest_code_25edf3f069ce494a89fa3d6c32920f82-5" href="#rest_code_25edf3f069ce494a89fa3d6c32920f82-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">raw_packet</span><span class="p">)</span>
+</pre></div>
+<p>The output is something like:</p>
+<pre class="literal-block">b'E\x00\x00T\xef]@\x00@\x017G\n\x00\x00\x01\n\x00\x00\x04\x08\x00M\xef%\xc2\x00\x05As\x9dY\x00\x00\x00\x00\xe1\xa9\x05\x00\x00\x00\x00\x00\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&amp;\'()*+,-./01234567</pre>
+<p>which is a raw IP packet with ICMP packet as data.</p>
+<p>By the way, seems like Linux kernel is sending <a class="reference external" href="https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol">SSDP</a> packets
+to the TUN interface. So don't get suprised to see some unexpected traffic.</p>
+</section><section id="sending-packets"><h3>Sending packets</h3>
+<p>To send raw IP packets we write them to TUN interface:</p>
+<div class="code"><pre class="code python"><a id="rest_code_9ab1a45893dc453c829b03625a180235-1" name="rest_code_9ab1a45893dc453c829b03625a180235-1" href="#rest_code_9ab1a45893dc453c829b03625a180235-1"></a><span class="kn">import</span> <span class="nn">os</span>
+<a id="rest_code_9ab1a45893dc453c829b03625a180235-2" name="rest_code_9ab1a45893dc453c829b03625a180235-2" href="#rest_code_9ab1a45893dc453c829b03625a180235-2"></a>
+<a id="rest_code_9ab1a45893dc453c829b03625a180235-3" name="rest_code_9ab1a45893dc453c829b03625a180235-3" href="#rest_code_9ab1a45893dc453c829b03625a180235-3"></a><span class="n">icmp_req</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">'E</span><span class="se">\x00\x00</span><span class="s1">(</span><span class="se">\x00\x00\x00\x00</span><span class="s1">@</span><span class="se">\x01</span><span class="s1">`</span><span class="se">\xc2\n\x00\x00\x04\x08\x08</span><span class="s1">'</span>\
+<a id="rest_code_9ab1a45893dc453c829b03625a180235-4" name="rest_code_9ab1a45893dc453c829b03625a180235-4" href="#rest_code_9ab1a45893dc453c829b03625a180235-4"></a>    <span class="s1">'</span><span class="se">\x08\x08\x08\x00\x0f\xaa\x00</span><span class="s1">{</span><span class="se">\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00</span><span class="s1">test'</span>
+<a id="rest_code_9ab1a45893dc453c829b03625a180235-5" name="rest_code_9ab1a45893dc453c829b03625a180235-5" href="#rest_code_9ab1a45893dc453c829b03625a180235-5"></a><span class="n">os</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">ftun</span><span class="p">,</span> <span class="n">icmp_req</span><span class="p">)</span>
+</pre></div>
+<p>By the way, we can use <a class="reference external" href="https://github.com/mike01/pypacker">pypacker</a> to
+construct and parse raw packets.</p>
+</section></section><section id="prerequisites"><h2>Prerequisites</h2>
+<ul>
+<li><p>To use TUN/TAP devices python scripts must be run with root permissions.</p></li>
+<li>
+<p>To forward packets from TUN/TAP to other interfaces (<cite>eth0</cite>), packet forwarding
+must be enabled:</p>
+<pre class="literal-block"># echo 1 &gt; /proc/sys/net/ipv4/ip_forward
+# iptables -P FORWARD ACCEPT</pre>
+</li>
+<li>
+<p>To properly route outgoing packets NAT must be enabled:</p>
+<pre class="literal-block"># iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -j MASQUERADE</pre>
+</li>
+</ul>
+<p class="rubric">References</p>
+<aside class="footnote-list brackets"><aside class="footnote brackets" id="f1" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-1">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/tuntap.txt">https://www.kernel.org/doc/Documentation/networking/tuntap.txt</a></p>
+</aside><aside class="footnote brackets" id="f2" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-2">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://code.kryo.se/iodine/">http://code.kryo.se/iodine/</a></p>
+</aside><aside class="footnote brackets" id="f3" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-3">3</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://cs.brown.edu/courses/cs168/s11/handouts/dtun.pdf">http://cs.brown.edu/courses/cs168/s11/handouts/dtun.pdf</a></p>
+</aside><aside class="footnote brackets" id="f4" role="note"><span class="label"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://backreference.org/2010/03/26/tuntap-interface-tutorial/">http://backreference.org/2010/03/26/tuntap-interface-tutorial/</a></p>
+</aside><aside class="footnote brackets" id="f5" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-4">5</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://github.com/montag451/pytun">https://github.com/montag451/pytun</a></p>
+</aside><aside class="footnote brackets" id="f6" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-5">6</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://github.com/Gawen/pytun">https://github.com/Gawen/pytun</a></p>
+</aside></aside></section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/linux/" rel="tag">linux</a></li>
+            <li><a class="tag p-category" href="../../categories/networking/" rel="tag">networking</a></li>
+            <li><a class="tag p-category" href="../../categories/python/" rel="tag">python</a></li>
+            <li><a class="tag p-category" href="../../categories/tap/" rel="tag">tap</a></li>
+            <li><a class="tag p-category" href="../../categories/tun/" rel="tag">tun</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../systemd-execute-bash-script-on-start/" rel="prev" title="systemd: execute bash script on start">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../linux-network-routing-table/" rel="next" title="Linux network routing table">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

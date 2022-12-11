@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about systemd)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/systemd.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>systemd: execute bash script on start</title><link>http://blog.povilasb.com/posts/systemd-execute-bash-script-on-start/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;&lt;cite&gt;systemd&lt;/cite&gt; is a not so new Linux init system. It's default on Debian systems.
+This is the very first process to start when Linux boots - it's PID is 1:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ ps aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.1 139092  6876 ?        Ss   14:03   0:01 /sbin/init
+
+$ file /sbin/init
+/sbin/init: symbolic link to /lib/systemd/systemd&lt;/pre&gt;
+&lt;p&gt;I've been running systemd for a while.
+But thanks to it's System V init script compatibility I've never actually
+written any scripts for it.&lt;/p&gt;
+&lt;p&gt;I wanted to start a simple bash script after linux booted and I decided it's
+time to use systemd to take care of business.&lt;/p&gt;
+&lt;section id="unit-file"&gt;
+&lt;h2&gt;Unit file&lt;/h2&gt;
+&lt;p&gt;Unit files describe the services &lt;cite&gt;systemd&lt;/cite&gt; manages. Very simple unit file
+that starts a bash script could be:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;[Unit]
+Description=Starts some bash script
+
+[Service]
+WorkingDirectory=/home/povilas/
+Type=forking
+ExecStart=/bin/bash my_script.sh
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target&lt;/pre&gt;
+&lt;p&gt;&lt;cite&gt;WantedBy&lt;/cite&gt; option in the &lt;cite&gt;Install&lt;/cite&gt; section means that this unit is wanted by
+&lt;cite&gt;multi-user.target&lt;/cite&gt; unit. Meaning this unit becomes a dependency of
+&lt;cite&gt;multi-user.target&lt;/cite&gt; unit.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="install-unit-file"&gt;
+&lt;h2&gt;Install unit file&lt;/h2&gt;
+&lt;p&gt;Save the unit file to &lt;cite&gt;/etc/systemd/system/my_unit.service&lt;/cite&gt; and enable it with:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;# systemctl enable my_unit.service&lt;/pre&gt;
+&lt;p&gt;Next time the OS boots, bash script will be executed.&lt;/p&gt;
+&lt;/section&gt;</description><category>linux</category><category>systemd</category><guid>http://blog.povilasb.com/posts/systemd-execute-bash-script-on-start/</guid><pubDate>Thu, 10 Aug 2017 11:09:19 GMT</pubDate></item></channel></rss>

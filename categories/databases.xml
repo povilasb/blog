@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about databases)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/databases.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>MongoDB Primer</title><link>http://blog.povilasb.com/posts/mongodb-primer/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;When I have some to build sample sample toy PoC applications I tend to use
+MongoDB.
+I guess because it's schemaless, eats any JSON I give, has easy query language
+and good language support.&lt;/p&gt;
+&lt;section id="concepts"&gt;
+&lt;h2&gt;Concepts&lt;/h2&gt;
+&lt;p&gt;Just like in MySQL I have a database which groups document collections together.
+Document collection is like a table in MySQL. It groups multiple logically
+related documents, e.g. people, items, payments, etc.
+Although, each document must not have the same fields.
+A document is simply JSON object. E.g. person document:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;{
+    "name": "Povilas",
+    "age": 26,
+    "gender": "male",
+    "interests": ["systems", "books", "coding"]
+}&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="basic-commands"&gt;
+&lt;h2&gt;Basic Commands&lt;/h2&gt;
+&lt;p&gt;Show all databases:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;&amp;gt; show dbs&lt;/pre&gt;
+&lt;p&gt;Create a database:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;&amp;gt; use my_db&lt;/pre&gt;
+&lt;p&gt;This command won't create DB immediately. Once you insert the first document
+new database together with a table will be created.&lt;/p&gt;
+&lt;p&gt;Insert a document:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;&amp;gt; db.table.insertOne({"name": "Povilas", "age", 26, "gender": "male"})&lt;/pre&gt;
+&lt;p&gt;Delete document:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;&amp;gt; db.table.deleteOne({"name": "Povilas"})&lt;/pre&gt;
+&lt;p&gt;Show all documents:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;&amp;gt; db.table.find()&lt;/pre&gt;
+&lt;p&gt;Delete all documents:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;&amp;gt; db.table.deleteMany({})&lt;/pre&gt;
+&lt;/section&gt;</description><category>databases</category><category>mongodb</category><guid>http://blog.povilasb.com/posts/mongodb-primer/</guid><pubDate>Fri, 19 May 2017 13:56:59 GMT</pubDate></item></channel></rss>

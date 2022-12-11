@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running Python async function | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/running-python-async-function/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../machine-learning-intro/" title="Machine learning in 3 lines of code" type="text/html">
+<link rel="next" href="../async-write-to-stdout-slower-than-print/" title="Async write to stdout slower than print?" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Running Python async function">
+<meta property="og:url" content="http://blog.povilasb.com/posts/running-python-async-function/">
+<meta property="og:description" content="Lately I was playing with asyncio and
+aiohttp in python 3.5.2.
+First time I hit the wall was when I was trying to test async methods:
+async def say_hi():
+    print('Hi!')
+
+First of all I did not know ">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2016-12-14T07:37:58+02:00">
+<meta property="article:tag" content="asyncio">
+<meta property="article:tag" content="python3">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Running Python async function</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2016-12-14T07:37:58+02:00" itemprop="datePublished" title="2016-12-14 07:37">2016-12-14 07:37</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Lately I was playing with asyncio and
+<a class="reference external" href="https://github.com/KeepSafe/aiohttp">aiohttp</a> in python 3.5.2.
+First time I hit the wall was when I was trying to test async methods:</p>
+<div class="code"><pre class="code python"><a id="rest_code_ff82525011984dd0b4423977207155e5-1" name="rest_code_ff82525011984dd0b4423977207155e5-1" href="#rest_code_ff82525011984dd0b4423977207155e5-1"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">say_hi</span><span class="p">():</span>
+<a id="rest_code_ff82525011984dd0b4423977207155e5-2" name="rest_code_ff82525011984dd0b4423977207155e5-2" href="#rest_code_ff82525011984dd0b4423977207155e5-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">'Hi!'</span><span class="p">)</span>
+</pre></div>
+<p>First of all I did not know how to call <cite>say_hi()</cite> directly without event loop.
+Reading <a class="reference external" href="https://docs.python.org/3/library/asyncio-task.html">docs</a> didn't
+really help me.
+I already knew I could do:</p>
+<div class="code"><pre class="code python"><a id="rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-1" name="rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-1" href="#rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-1"></a><span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+<a id="rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-2" name="rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-2" href="#rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-2"></a><span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">say_hi</span><span class="p">())</span>
+<a id="rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-3" name="rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-3" href="#rest_code_5fbfdd1d1a1d49fb842ac6a640b86f84-3"></a><span class="n">loop</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+<p>But I was more interested how asyncio event loop triggers this method by
+itself.
+So I decided to dig into asyncio source code.</p>
+<section id="summary"><h2>Summary</h2>
+<p>I've found two ways to call async <cite>say_hi()</cite> without event loop.</p>
+<ol class="arabic simple">
+<li><p>Send something to coroutine:</p></li>
+</ol>
+<div class="code"><pre class="code python"><a id="rest_code_623ca78c162a4f6baa227ebfc4f00fce-1" name="rest_code_623ca78c162a4f6baa227ebfc4f00fce-1" href="#rest_code_623ca78c162a4f6baa227ebfc4f00fce-1"></a><span class="n">cor</span> <span class="o">=</span> <span class="n">say_hi</span><span class="p">()</span>
+<a id="rest_code_623ca78c162a4f6baa227ebfc4f00fce-2" name="rest_code_623ca78c162a4f6baa227ebfc4f00fce-2" href="#rest_code_623ca78c162a4f6baa227ebfc4f00fce-2"></a><span class="k">try</span><span class="p">:</span>
+<a id="rest_code_623ca78c162a4f6baa227ebfc4f00fce-3" name="rest_code_623ca78c162a4f6baa227ebfc4f00fce-3" href="#rest_code_623ca78c162a4f6baa227ebfc4f00fce-3"></a>    <span class="n">cor</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<a id="rest_code_623ca78c162a4f6baa227ebfc4f00fce-4" name="rest_code_623ca78c162a4f6baa227ebfc4f00fce-4" href="#rest_code_623ca78c162a4f6baa227ebfc4f00fce-4"></a><span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+<a id="rest_code_623ca78c162a4f6baa227ebfc4f00fce-5" name="rest_code_623ca78c162a4f6baa227ebfc4f00fce-5" href="#rest_code_623ca78c162a4f6baa227ebfc4f00fce-5"></a>    <span class="k">pass</span>
+</pre></div>
+<ol class="arabic simple" start="2">
+<li><p>Wrap coroutine in Future:</p></li>
+</ol>
+<div class="code"><pre class="code python"><a id="rest_code_be8b180d11fc4a8fba324aa5cc5f8e02-1" name="rest_code_be8b180d11fc4a8fba324aa5cc5f8e02-1" href="#rest_code_be8b180d11fc4a8fba324aa5cc5f8e02-1"></a><span class="n">future</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span><span class="n">say_hi</span><span class="p">())</span>
+<a id="rest_code_be8b180d11fc4a8fba324aa5cc5f8e02-2" name="rest_code_be8b180d11fc4a8fba324aa5cc5f8e02-2" href="#rest_code_be8b180d11fc4a8fba324aa5cc5f8e02-2"></a><span class="n">future</span><span class="o">.</span><span class="n">_step</span><span class="p">()</span>
+</pre></div>
+</section><section id="baseeventloop"><h2>BaseEventLoop</h2>
+<p>Turns out on Debian <cite>asyncio.get_event_loop()</cite> returns <cite>UnixSelectEventLoop</cite>.
+It extends some other event loops:</p>
+<pre class="literal-block">UnixSelectEventLoop --&gt; BaseSelectorEventLoop --&gt; BaseEventLoop --&gt; AbstractEventLoop</pre>
+<p><cite>BaseEventLoop</cite> is the one that interests me, because it implements
+<cite>run_until_complete()</cite> method.</p>
+<p><cite>run_until_complete()</cite> calls <cite>self.run_forever()</cite> which calls
+<cite>self._run_once()</cite>.</p>
+<p>What <cite>_run_once()</cite> essentially does is it gets the handle from the task queue
+and calls <cite>handle._run()</cite>:</p>
+<div class="code"><pre class="code python"><a id="rest_code_84dd1650973447d49555a4636b223557-1" name="rest_code_84dd1650973447d49555a4636b223557-1" href="#rest_code_84dd1650973447d49555a4636b223557-1"></a><span class="k">class</span> <span class="nc">BaseEventLoop</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">AbstractEventLoop</span><span class="p">):</span>
+<a id="rest_code_84dd1650973447d49555a4636b223557-2" name="rest_code_84dd1650973447d49555a4636b223557-2" href="#rest_code_84dd1650973447d49555a4636b223557-2"></a>
+<a id="rest_code_84dd1650973447d49555a4636b223557-3" name="rest_code_84dd1650973447d49555a4636b223557-3" href="#rest_code_84dd1650973447d49555a4636b223557-3"></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="rest_code_84dd1650973447d49555a4636b223557-4" name="rest_code_84dd1650973447d49555a4636b223557-4" href="#rest_code_84dd1650973447d49555a4636b223557-4"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_ready</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">deque</span><span class="p">()</span>
+<a id="rest_code_84dd1650973447d49555a4636b223557-5" name="rest_code_84dd1650973447d49555a4636b223557-5" href="#rest_code_84dd1650973447d49555a4636b223557-5"></a>
+<a id="rest_code_84dd1650973447d49555a4636b223557-6" name="rest_code_84dd1650973447d49555a4636b223557-6" href="#rest_code_84dd1650973447d49555a4636b223557-6"></a>    <span class="k">def</span> <span class="nf">_run_once</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="rest_code_84dd1650973447d49555a4636b223557-7" name="rest_code_84dd1650973447d49555a4636b223557-7" href="#rest_code_84dd1650973447d49555a4636b223557-7"></a>        <span class="n">handle</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ready</span><span class="o">.</span><span class="n">popleft</span><span class="p">()</span>
+<a id="rest_code_84dd1650973447d49555a4636b223557-8" name="rest_code_84dd1650973447d49555a4636b223557-8" href="#rest_code_84dd1650973447d49555a4636b223557-8"></a>        <span class="n">handle</span><span class="o">.</span><span class="n">_run</span><span class="p">()</span>
+</pre></div>
+<p><cite>handle</cite> type is <cite>asyncio.events.Handle</cite>. It's simplified version is:</p>
+<div class="code"><pre class="code python"><a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-1" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-1" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-1"></a><span class="k">class</span> <span class="nc">Handle</span><span class="p">:</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-2" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-2" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-2"></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">loop</span><span class="p">):</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-3" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-3" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span> <span class="o">=</span> <span class="n">loop</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-4" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-4" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-4"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_callback</span> <span class="o">=</span> <span class="n">callback</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-5" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-5" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_args</span> <span class="o">=</span> <span class="n">args</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-6" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-6" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-6"></a>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-7" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-7" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-7"></a><span class="k">def</span> <span class="nf">_run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-8" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-8" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-8"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-9" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-9" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_callback</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_args</span><span class="p">)</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-10" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-10" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-10"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+<a id="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-11" name="rest_code_702ca35f2b2d489ca5a634e5e493a4f7-11" href="#rest_code_702ca35f2b2d489ca5a634e5e493a4f7-11"></a>        <span class="c1"># ...</span>
+</pre></div>
+<p>Now this is where the call chain started from <cite>run_until_complete()</cite> stops.
+And it's clear to me that I have to find the spot where handles are created
+and added to the <cite>event_loop._ready</cite> queue (or dequeu to be precise).</p>
+</section><section id="how-my-async-function-is-turned-into-handle"><h2>How my async function is turned into Handle?</h2>
+<p>Let's go back to <cite>loop.run_until_complete()</cite>. Simplified version could be read
+as:</p>
+<div class="code"><pre class="code python"><a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-1" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-1" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-1"></a><span class="k">def</span> <span class="nf">run_until_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">future</span><span class="p">):</span>
+<a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-2" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-2" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-2"></a>    <span class="n">future</span> <span class="o">=</span> <span class="n">tasks</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span><span class="n">future</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+<a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-3" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-3" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-3"></a>
+<a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-4" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-4" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-4"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-5" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-5" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">run_forever</span><span class="p">()</span>
+<a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-6" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-6" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-6"></a>    <span class="k">except</span><span class="p">:</span>
+<a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-7" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-7" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-7"></a>        <span class="c1"># ...</span>
+<a id="rest_code_53ddad6a94d444489919cbf28ae0dc22-8" name="rest_code_53ddad6a94d444489919cbf28ae0dc22-8" href="#rest_code_53ddad6a94d444489919cbf28ae0dc22-8"></a>    <span class="k">return</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+</pre></div>
+<p>Ok, let's investigate <cite>tasks.ensure_future()</cite>. In my case it does:</p>
+<div class="code"><pre class="code python"><a id="rest_code_1e0c93f1cef14db7977b80ded7d8ac24-1" name="rest_code_1e0c93f1cef14db7977b80ded7d8ac24-1" href="#rest_code_1e0c93f1cef14db7977b80ded7d8ac24-1"></a><span class="k">return</span> <span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">coro_or_future</span><span class="p">)</span>
+</pre></div>
+<p>Which by itself does not do a lot:</p>
+<div class="code"><pre class="code python"><a id="rest_code_6be0b0b27d894d8db246b9f090ed7f20-1" name="rest_code_6be0b0b27d894d8db246b9f090ed7f20-1" href="#rest_code_6be0b0b27d894d8db246b9f090ed7f20-1"></a><span class="k">return</span> <span class="n">tasks</span><span class="o">.</span><span class="n">Task</span><span class="p">(</span><span class="n">coro</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+</pre></div>
+<p>But <cite>Task</cite> constructor calls something interesting:</p>
+<div class="code"><pre class="code python"><a id="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-1" name="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-1" href="#rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-1"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coro</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<a id="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-2" name="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-2" href="#rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-2"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">loop</span><span class="o">=</span><span class="n">loop</span><span class="p">)</span>
+<a id="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-3" name="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-3" href="#rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-3"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_coro</span> <span class="o">=</span> <span class="n">coro</span>
+<a id="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-4" name="rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-4" href="#rest_code_ec8c9c4cbbb14bb8a3b29ee6efdac559-4"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="o">.</span><span class="n">call_soon</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_step</span><span class="p">)</span>
+</pre></div>
+<p>And <cite>Task._step()</cite> method is even more interesting:</p>
+<div class="code"><pre class="code python"><a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-1" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-1" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-1"></a><span class="k">def</span> <span class="nf">_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-2" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-2" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-2"></a>    <span class="c1"># ...</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-3" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-3" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-3"></a>    <span class="n">coro</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coro</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-4" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-4" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-4"></a>    <span class="c1"># ...</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-5" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-5" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-5"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-6" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-6" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-6"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">coro</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-7" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-7" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-7"></a>    <span class="k">except</span><span class="p">:</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-8" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-8" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-8"></a>        <span class="c1"># ...</span>
+<a id="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-9" name="rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-9" href="#rest_code_ef936be4a60c48dc97fa6d8a1f4bd22d-9"></a>    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+<p>AHA, seems like <cite>coro.send(None)</cite> triggers the async function.
+I quickly test it and indeed it works :) :</p>
+<div class="code"><pre class="code python"><a id="rest_code_e78fcfbcd6004a5e8a35ab49f7899b60-1" name="rest_code_e78fcfbcd6004a5e8a35ab49f7899b60-1" href="#rest_code_e78fcfbcd6004a5e8a35ab49f7899b60-1"></a><span class="n">say_hi</span><span class="p">()</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+<p>Anyway, let's keep hunting how this coroutine (my async function) is turned
+into Handle...</p>
+<p>The next interesting function in <cite>Task</cite> contructor is <cite>loop.call_soon()</cite>.
+It simply calls <cite>self._call_soon()</cite>.
+Which does the rest:</p>
+<div class="code"><pre class="code python"><a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-1" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-1" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-1"></a><span class="k">def</span> <span class="nf">_call_soon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-2" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-2" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-2"></a>    <span class="k">if</span> <span class="p">(</span><span class="n">coroutines</span><span class="o">.</span><span class="n">iscoroutine</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-3" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-3" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-3"></a>    <span class="ow">or</span> <span class="n">coroutines</span><span class="o">.</span><span class="n">iscoroutinefunction</span><span class="p">(</span><span class="n">callback</span><span class="p">)):</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-4" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-4" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-4"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"coroutines cannot be used with call_soon()"</span><span class="p">)</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-5" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-5" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-5"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_check_closed</span><span class="p">()</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-6" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-6" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-6"></a>    <span class="n">handle</span> <span class="o">=</span> <span class="n">events</span><span class="o">.</span><span class="n">Handle</span><span class="p">(</span><span class="n">callback</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-7" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-7" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-7"></a>    <span class="k">if</span> <span class="n">handle</span><span class="o">.</span><span class="n">_source_traceback</span><span class="p">:</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-8" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-8" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-8"></a>        <span class="k">del</span> <span class="n">handle</span><span class="o">.</span><span class="n">_source_traceback</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-9" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-9" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-9"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_ready</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+<a id="rest_code_6f8c87fcc09b415686a3818571b6ad2d-10" name="rest_code_6f8c87fcc09b415686a3818571b6ad2d-10" href="#rest_code_6f8c87fcc09b415686a3818571b6ad2d-10"></a>    <span class="k">return</span> <span class="n">handle</span>
+</pre></div>
+<p>It wraps callback (our async function) into <cite>Handle</cite> and appends it
+to the <cite>loop._ready</cite> queue.</p>
+<p>So the call graph is something like this:</p>
+<pre class="literal-block">   loop.run_until_complete(future)
+               |
+               V
+   tasks.ensure_future(future, loop)
+               |
+               V
+      loop.create_task(future)
+               |
+               V
+      task.Task(future, loop)
+               |
+               V
+      loop.call_soon(task._step)
+               |
+               V
+      loop._call_soon(task._step)
+               |
+               V
+loop._ready.append(Handle(task._step))</pre>
+</section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/asyncio/" rel="tag">asyncio</a></li>
+            <li><a class="tag p-category" href="../../categories/python3/" rel="tag">python3</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../machine-learning-intro/" rel="prev" title="Machine learning in 3 lines of code">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../async-write-to-stdout-slower-than-print/" rel="next" title="Async write to stdout slower than print?">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

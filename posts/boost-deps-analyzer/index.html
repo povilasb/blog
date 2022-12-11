@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boost dependency analyzer | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/boost-deps-analyzer/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../cpp-code-coverage-by-tests/" title="C++ code coverage by tests" type="text/html">
+<link rel="next" href="../machine-learning-intro/" title="Machine learning in 3 lines of code" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Boost dependency analyzer">
+<meta property="og:url" content="http://blog.povilasb.com/posts/boost-deps-analyzer/">
+<meta property="og:description" content="Boost Dependency Analyzer
+Boost dependency analyzer is a tool that analyzes and visualizes Boost library
+dependencies [1]. Unfortunately it has not been open sourced although
+available for download fo">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2014-11-30T13:34:00+02:00">
+<meta property="article:tag" content="boost">
+<meta property="article:tag" content="cpp">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Boost dependency analyzer</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2014-11-30T13:34:00+02:00" itemprop="datePublished" title="2014-11-30 13:34">2014-11-30 13:34</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <section id="boost-dependency-analyzer"><h2>Boost Dependency Analyzer</h2>
+<p>Boost dependency analyzer is a tool that analyzes and visualizes Boost library
+dependencies <a class="footnote-reference brackets" href="#f1" id="footnote-reference-1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>. Unfortunately it has not been open sourced although
+available for download for free. There's Windows and Linux binaries available.</p>
+<img alt="/images/boost_deps_analyzer.png" src="../../images/boost_deps_analyzer.png"><p>Let's run this tool on Debian wheezy. We will need some version of Boost
+sources, QT 5 libraries and Boost dependency analyzer itself.</p>
+<section id="download-latest-boost"><h3>Download latest Boost</h3>
+<p>By the time a wrote this document latest stable Boost version was 1.57.0.
+Download it from here <a class="reference external" href="http://sourceforge.net/projects/boost/files/boost/1.57.0/">http://sourceforge.net/projects/boost/files/boost/1.57.0/</a>
+and extract the archive.</p>
+<p>Before continuing let's compile
+<a class="reference external" href="http://www.boost.org/doc/libs/1_57_0/tools/bcp/doc/html/index.html">BCP</a> tool.
+It will be used to detect the dependencies.
+In boost sources root directory run:</p>
+<pre class="literal-block">$ ./bootstrap.sh
+$ ./b2 tools/bcp</pre>
+<p>BCP will be compiled to something like
+<cite>$(boost_roo_dir)/bin.v2/tools/bcp/gcc-4.7/release/link-static</cite>.
+This is the directory where you'll locate BCP executable when running
+Boost dependency analyzer tool.</p>
+</section><section id="download-boost-deps-analyzer"><h3>Download Boost deps analyzer</h3>
+<pre class="literal-block">$ cd /tmp
+$ wget http://www.meetingcpp.com/tl_files/tools/boostdependencygui_linux.zip
+$ unzipt -e boostdependencygui_linux.zip
+$ cd boostdependencygui
+$ chmod +x boostdependencygui</pre>
+<p>Boost dependency analyzer comes with binary compiled for i386 architectures.
+Before running it we need to install dependency packages first which provide
+required libraries.</p>
+</section><section id="prerequisites"><h3>Prerequisites</h3>
+<p>Debian packages:</p>
+<ul class="simple">
+<li><p>libqt5widgets5:i386</p></li>
+<li><p>libqt5sql5:i386</p></li>
+</ul>
+<p>To install i386 packages we must add i386 to the dpkg architecture list:</p>
+<pre class="literal-block">$ dpkg --add-architecture i386
+$ sudo apt-get update</pre>
+<p>Now we can install i386 packages:</p>
+<pre class="literal-block">$ sudo apt-get install libqt5widgets5:i386 libqt5sql5:i386</pre>
+</section><section id="running-the-analyzer"><h3>Running the analyzer</h3>
+<p>Boost dependency analyzer comes with some compiled libraries. Unfortunately
+it fails to load them. Let's patch LD_LIBRARY_PATH:</p>
+<pre class="literal-block">$ export LD_LIBRARY_PATH=/tmp/boostdependencygui</pre>
+<p>Also those libraries have different names than the executable expects. Let's
+create symlinks to fix this:</p>
+<pre class="literal-block">$ ln -s libGraphLayout.so.1.0.0 libGraphLayout.so.1
+$ ln -s libProcessSinkLib.so.1.0.0 libProcessSinkLib.so.1</pre>
+<p>Now we should be able to run the analyzer tool:</p>
+<pre class="literal-block">$ cd /tmp/boostdependencygui
+$ ./boostdependencygui</pre>
+<p>From GUI menu select Dependencies-&gt;Read dependencies, locate directory
+where you've extracted Boost libraries archive and press Open. Then locate
+where you've compiled BCP tool. After this analyzer should start processing,
+when it's done you can view the dependencies graph <a class="footnote-reference brackets" href="#f2" id="footnote-reference-2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.</p>
+<p class="rubric">References</p>
+<aside class="footnote-list brackets"><aside class="footnote brackets" id="f1" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-1">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://www.meetingcpp.com/index.php/br/items/boost-dependency-analyzer.html">http://www.meetingcpp.com/index.php/br/items/boost-dependency-analyzer.html</a></p>
+</aside><aside class="footnote brackets" id="f2" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-2">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://www.youtube.com/watch?v=4yZG8gbw0sQ#t=10">https://www.youtube.com/watch?v=4yZG8gbw0sQ#t=10</a></p>
+</aside></aside></section></section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/boost/" rel="tag">boost</a></li>
+            <li><a class="tag p-category" href="../../categories/cpp/" rel="tag">cpp</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../cpp-code-coverage-by-tests/" rel="prev" title="C++ code coverage by tests">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../machine-learning-intro/" rel="next" title="Machine learning in 3 lines of code">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

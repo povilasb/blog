@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boyer-Moore string search | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/boyer-moore-string-search/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../oat-flour-pancakes/" title="Oat flour pancakes" type="text/html">
+<link rel="next" href="../systemd-execute-bash-script-on-start/" title="systemd: execute bash script on start" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Boyer-Moore string search">
+<meta property="og:url" content="http://blog.povilasb.com/posts/boyer-moore-string-search/">
+<meta property="og:description" content='Boyer-Moore is a string search algorithm.
+The first time I heard about it was on FreeBSD mailing list when someone
+was explaining "why GNU grep is fast". [2]
+Although, it was invented in 1977 [3], tur'>
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-08-10T10:05:28+03:00">
+<meta property="article:tag" content="algorithms">
+<meta property="article:tag" content="string-search">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Boyer-Moore string search</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2017-08-10T10:05:28+03:00" itemprop="datePublished" title="2017-08-10 10:05">2017-08-10 10:05</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Boyer-Moore is a string search algorithm.
+The first time I heard about it was on FreeBSD mailing list when someone
+was explaining "why GNU grep is fast". <a class="footnote-reference brackets" href="#f2" id="footnote-reference-1" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>
+Although, it was invented in 1977 <a class="footnote-reference brackets" href="#f3" id="footnote-reference-2" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>, turns out this algorithm is
+considered one of the most efficient and very widely used even nowadays. <a class="footnote-reference brackets" href="#f1" id="footnote-reference-3" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p>
+<p>So I thought I have to at least take a brief overview of this classic algorithm.</p>
+<section id="overview"><h2>Overview</h2>
+<p>Similarly to <a class="reference external" href="https://en.wikipedia.org/wiki/String_searching_algorithm#Na.C3.AFve_string_search">naive string search</a>.
+the algorithm scans text from left to right searching for the given pattern.
+Although, the pattern is matched from right to left:</p>
+<pre class="literal-block">Text:    X X X A B C X X X D B C
+Pattern:       D B C - - -&gt; pattern shift
+              &lt;- - - pattern matching</pre>
+<p>What makes Boyer-Moore algorithm faster than naive string search is the
+heuristics it uses to shift pattern right. Rather than shifting one symbol
+at a time, this algorithm uses some heuristics to skip multiple symbols.
+We can optionally choose which heuristics to use. In order to go fastest,
+we should use them all.</p>
+<p>Each heuristic calculates how many positions we can skip. Then we choose the
+maximum number of skips and repeat the matching.</p>
+<p>At first glance the algorithm looks pretty easy. But it has multiple
+cases which might make it a little cofusing.</p>
+</section><section id="bad-character-heuristic"><h2>Bad character heuristic</h2>
+<p>It states that when text does not match the pattern at a given position, we
+can shift the pattern right until it does. <a class="footnote-reference brackets" href="#f4" id="footnote-reference-4" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a></p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7
+T: X X X A B C A C
+P:     B C A C
+       0 1 2 3</pre>
+<p>In this case the algorithm starts matching the pattern at text position 5
+and pattern position 3. The mismatch occurs at <cite>text_pos</cite> 4 and <cite>pattern_pos</cite> 2.
+The mismatched symbol is 'B'. 'B' exists in the <cite>pattern_pos</cite> 0.
+Thus we can skip 2 symbols: <cite>2 - 0 = 2</cite>:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7
+T: X X X A B C A C
+P:         B C A C
+           0 1 2 3</pre>
+<p>In case the pattern does not have the mismatched symbol, we can move it
+past that symbol:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:     D C A C</pre>
+<p>Mismatched symbol is <cite>B</cite> which does not exist in the pattern.
+Thus the pattern is shifted to:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:           D C A C</pre>
+<section id="preprocessing"><h3>Preprocessing</h3>
+<p>When mismatch happens we could search for a matching symbol traversing
+the pattern backwards. That would take O(n) comparisons.
+Instead we can achieve O(1) with a lookup table.
+This table is constructed once for the given pattern and it holds the last
+position for a given character.  E.g.:</p>
+<div class="code"><pre class="code python"><a id="rest_code_29d83651df1346e39ab76d30cf910d5f-1" name="rest_code_29d83651df1346e39ab76d30cf910d5f-1" href="#rest_code_29d83651df1346e39ab76d30cf910d5f-1"></a><span class="n">pattern</span> <span class="o">=</span> <span class="s1">'abca'</span>
+<a id="rest_code_29d83651df1346e39ab76d30cf910d5f-2" name="rest_code_29d83651df1346e39ab76d30cf910d5f-2" href="#rest_code_29d83651df1346e39ab76d30cf910d5f-2"></a><span class="n">table</span><span class="p">[</span><span class="s1">'a'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
+<a id="rest_code_29d83651df1346e39ab76d30cf910d5f-3" name="rest_code_29d83651df1346e39ab76d30cf910d5f-3" href="#rest_code_29d83651df1346e39ab76d30cf910d5f-3"></a><span class="n">table</span><span class="p">[</span><span class="s1">'b'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<a id="rest_code_29d83651df1346e39ab76d30cf910d5f-4" name="rest_code_29d83651df1346e39ab76d30cf910d5f-4" href="#rest_code_29d83651df1346e39ab76d30cf910d5f-4"></a><span class="n">table</span><span class="p">[</span><span class="s1">'c'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+<div class="code"><pre class="code python"><a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1" href="#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-1"></a><span class="k">def</span> <span class="nf">preproc_bad_character</span><span class="p">(</span><span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2" href="#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-2"></a>    <span class="n">last_char_pos</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">256</span>
+<a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3" href="#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-3"></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pattern</span><span class="p">):</span>
+<a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4" href="#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-4"></a>        <span class="n">last_char_pos</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)]</span> <span class="o">=</span> <span class="n">i</span>
+<a id="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5" name="rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5" href="#rest_code_7ec19ee5d8f04dddab0f080a00bbd7b6-5"></a>    <span class="k">return</span> <span class="n">last_char_pos</span>
+</pre></div>
+</section></section><section id="good-suffix-heuristic"><h2>Good suffix heuristic</h2>
+<p>This heuristic is nicely explained in <a class="reference external" href="https://www.youtube.com/watch?v=lkL6RkQvpMM">this video</a>.</p>
+<p>It heuristic has 3 cases:</p>
+<ol class="arabic">
+<li>
+<p>the matching pattern suffix exists in another pattern place:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P: A B C D B C</pre>
+<p><cite>BC</cite> matches the text and another <cite>BC</cite> is in the pattern at position <cite>1</cite>.
+Thus we could shift the pattern by <cite>3</cite> positions right:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:       A B C D B C</pre>
+</li>
+<li>
+<p>the matching pattern suffix is also the prefix of a pattern:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P: B C D A B C</pre>
+<p>In this case we can safely shift the pattern by <cite>4</cite> positions:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:         B C D A B C</pre>
+</li>
+<li>
+<p>When none of the above cases are satisfied the pattern is shifted past
+the matched text part:</p>
+<pre class="literal-block">   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:     D A B C
+
+   0 1 2 3 4 5 6 7 8 9
+T: X X X A B C A C D C
+P:             D A B C</pre>
+</li>
+</ol>
+<p>This heuristic also has a preprocessing step to construct a lookup table.
+The algorithm is a bit more complicated and better explained in <a class="footnote-reference brackets" href="#f6" id="footnote-reference-5" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a> <a class="footnote-reference brackets" href="#f5" id="footnote-reference-6" role="doc-noteref"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></a>.</p>
+<p class="rubric">References</p>
+<aside class="footnote-list brackets"><aside class="footnote brackets" id="f1" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-3">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://www-igm.univ-mlv.fr/~lecroq/string/node14.html">http://www-igm.univ-mlv.fr/~lecroq/string/node14.html</a></p>
+</aside><aside class="footnote brackets" id="f2" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-1">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html">https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html</a></p>
+</aside><aside class="footnote brackets" id="f3" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-2">3</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm">https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm</a></p>
+</aside><aside class="footnote brackets" id="f4" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-4">4</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://www.geeksforgeeks.org/pattern-searching-set-7-boyer-moore-algorithm-bad-character-heuristic/">http://www.geeksforgeeks.org/pattern-searching-set-7-boyer-moore-algorithm-bad-character-heuristic/</a></p>
+</aside><aside class="footnote brackets" id="f5" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-6">5</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://www.inf.fh-flensburg.de/lang/algorithmen/pattern/bmen.htm">http://www.inf.fh-flensburg.de/lang/algorithmen/pattern/bmen.htm</a></p>
+</aside><aside class="footnote brackets" id="f6" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-5">6</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://www.geeksforgeeks.org/boyer-moore-algorithm-good-suffix-heuristic/">http://www.geeksforgeeks.org/boyer-moore-algorithm-good-suffix-heuristic/</a></p>
+</aside></aside></section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/algorithms/" rel="tag">algorithms</a></li>
+            <li><a class="tag p-category" href="../../categories/string-search/" rel="tag">string-search</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../oat-flour-pancakes/" rel="prev" title="Oat flour pancakes">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../systemd-execute-bash-script-on-start/" rel="next" title="systemd: execute bash script on start">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

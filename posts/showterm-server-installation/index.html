@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Showterm server installation (Debian, Nginx, PostgreSQL) | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/showterm-server-installation/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../time-tracker-in-1day/" title="How I made my own time tracking tool in 1 day" type="text/html">
+<link rel="next" href="../cpp-code-coverage-by-tests/" title="C++ code coverage by tests" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Showterm server installation (Debian, Nginx, PostgreSQL)">
+<meta property="og:url" content="http://blog.povilasb.com/posts/showterm-server-installation/">
+<meta property="og:description" content="Showterm is a set of open source applications for terminal I/O recording and
+playback. It consists of client and server applications. Both of them are
+hosted on github. You can find easy instructions ">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2014-08-18T09:35:00+02:00">
+<meta property="article:tag" content="li">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="showterm.">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Showterm server installation (Debian, Nginx, PostgreSQL)</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2014-08-18T09:35:00+02:00" itemprop="datePublished" title="2014-08-18 09:35">2014-08-18 09:35</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Showterm is a set of open source applications for terminal I/O recording and
+playback. It consists of client and server applications. Both of them are
+hosted on github. You can find easy instructions how to install showterm client
+on <a class="reference external" href="http://showterm.io/">http://showterm.io/</a>. Unfortunately, there are no instructions how to install
+the server software.</p>
+<p>This tutorial demonstrates how to install showterm server on debian systems
+running Nginx web server and PostgreSQL database.</p>
+<aside class="admonition note"><p class="admonition-title">Note</p>
+<p>I've also successfully tested the server together with MySQL database.</p>
+</aside><section id="about-showterm-server"><h2>About Showterm server</h2>
+<p>Showterm server is <a class="reference external" href="http://rubyonrails.org/">Ruby on Rails</a> application.
+Showterm stores it's "videos" in a database. Specific database might be selected
+by editind the <em>database.yml</em> config file. This should be straighforward for
+Ruby on Rails developers. For others like me we'll see later how to do this.</p>
+<iframe width="100%" height="480" src="http://show.povilasb.com/f1cba221048ef40ce8222#fast"></iframe></section><section id="setup-postgresql"><h2>Setup PostgreSQL</h2>
+<ol class="arabic">
+<li>
+<p>Get the necessary Debian packages:</p>
+<pre class="literal-block">$ sudo apt-get install postgresql-9.1 postgresql-server-dev-9.1</pre>
+</li>
+<li>
+<p>Create PostgreSQL user and database dedicated to showterm server:</p>
+<pre class="literal-block">$ su postgres
+$ psql
+postgres=# create database showterm;
+postgres=# create user showterm with password 'showterm';
+postgres=# grant all privileges on database "showterm" to showterm;
+postgres=# \q</pre>
+</li>
+</ol>
+<p>Above instructions create database "showterm", user "showterm" with password
+"showterm".</p>
+<ol class="arabic" start="3">
+<li>
+<p>Update PostgreSQL <a class="reference external" href="http://www.postgresql.org/docs/9.1/static/auth-methods.html">authentification settings</a> to allow
+Ruby on Rails to connect to <em>showterm</em> database.
+Authetification configs are located in
+<em>/etc/postgresql/9.1/main/pg_hba.conf</em>. Append new entry:</p>
+<pre class="literal-block"># TYPE  DATABASE        USER       ADDRESS        METHOD
+local   showterm        showterm                  md5</pre>
+</li>
+</ol>
+<p>Now restart the computer to apply the new settings.</p>
+</section><section id="install-showterm-server"><h2>Install Showterm server</h2>
+<ol class="arabic">
+<li>
+<p>Get necessary Debian packages:</p>
+<pre class="literal-block">$ # Add unstable repo, it has ruby 2.0 packages.
+$ sudo echo "deb ftp://ftp.debian.org/debian/ unstable main contrib non-free" /etc/apt/sources.list.d/unstable.list
+$ sudo apt-get update
+$ sudo apt-get install ruby2.0 ruby2.0-dev gcc libc6-dev nodejs</pre>
+</li>
+</ol>
+<p>gcc and libc6-dev packages required to build some native ruby packages.</p>
+<ol class="arabic" start="2">
+<li>
+<p>Get server software from github:</p>
+<pre class="literal-block">$ git clone git@github.com:povilasb/showterm.io.git
+$ cd showterm.io
+$ git checkout debian</pre>
+</li>
+<li>
+<p>Install ruby Gems (this must be run in directory where you cloned Showterm):</p>
+<pre class="literal-block">$ gem2.0 install bundle
+$ bundle install</pre>
+</li>
+<li>
+<p>Setup PostgreSQL database <em>showterm</em>:</p>
+<pre class="literal-block">$ rake2.0 db:setup</pre>
+</li>
+<li>
+<p>Run the Showterm application:</p>
+<pre class="literal-block">$ rails serve</pre>
+</li>
+</ol>
+<p>Now our application runs on port <strong>3000</strong> by default. Let's configure nginx
+to redirect some domain to <em>http://localhost:3000</em>.</p>
+</section><section id="setup-nginx"><h2>Setup Nginx</h2>
+<ol class="arabic">
+<li>
+<p>Get Nginx package:</p>
+<pre class="literal-block">$ sudo apt-get install nginx</pre>
+</li>
+<li>
+<p>Add virtual host for showterm. Create a new virtual host file. E.g.
+<em>/etc/nginx/sites-available/show.example.com</em>:</p>
+<pre class="literal-block">server
+{
+        listen 80;
+        server_name show.example.com;
+
+        index index.html;
+        location / {
+                proxy_pass http://localhost:3000;
+        }
+}</pre>
+</li>
+</ol>
+<p>Now enable this virtual host:</p>
+<pre class="literal-block">$ ln -s /etc/nginx/sites-available/show.example.com /etc/nginx/sites-enabled/show.example.com</pre>
+<p>Reload Nginx configs:</p>
+<pre class="literal-block">$ nginx -s reload</pre>
+<p>That's it. Now you should be able to open Showterm server application in
+your Web browser with <em>http://show.example.com</em>.</p>
+</section><section id="configure-showterm-client"><h2>Configure Showterm client</h2>
+<p>By default Showterm client sends it's recorded stream to <a class="reference external" href="http://showterm.io">http://showterm.io</a>.
+In order to make it send to your own server, simply append a line to
+<em>~/.bashrc</em>:</p>
+<pre class="literal-block">$ export SHOWTERM_SERVER=http://show.example.com</pre>
+<p>For this to work you have to restart the terminal.</p>
+</section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/li/" rel="tag">li</a></li>
+            <li><a class="tag p-category" href="../../categories/linux/" rel="tag">linux</a></li>
+            <li><a class="tag p-category" href="../../categories/showterm/" rel="tag">showterm.</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../time-tracker-in-1day/" rel="prev" title="How I made my own time tracking tool in 1 day">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../cpp-code-coverage-by-tests/" rel="next" title="C++ code coverage by tests">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

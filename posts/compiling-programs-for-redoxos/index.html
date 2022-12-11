@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compiling programs for RedoxOS | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/compiling-programs-for-redoxos/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../ssh-agent-forwarding/" title="SSH Agent Forwarding" type="text/html">
+<link rel="next" href="../what-i-have-learned-from-resurrecting-my-operating-system/" title="What I have learned from resurrecting my operating system" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Compiling programs for RedoxOS">
+<meta property="og:url" content="http://blog.povilasb.com/posts/compiling-programs-for-redoxos/">
+<meta property="og:description" content="This writting is based on
+https://github.com/redox-os/redox/tree/0eba99659e6ef9d2184e64eaee045c4a720132db
+version.
+Currently it's quite easy to get your program to be compiled and shipped
+together wit">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-06-14T08:10:28+03:00">
+<meta property="article:tag" content="builds">
+<meta property="article:tag" content="redox">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Compiling programs for RedoxOS</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2017-06-14T08:10:28+03:00" itemprop="datePublished" title="2017-06-14 08:10">2017-06-14 08:10</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>This writting is based on
+<a class="reference external" href="https://github.com/redox-os/redox/tree/0eba99659e6ef9d2184e64eaee045c4a720132db">https://github.com/redox-os/redox/tree/0eba99659e6ef9d2184e64eaee045c4a720132db</a>
+version.</p>
+<p>Currently it's quite easy to get your program to be compiled and shipped
+together with Redox OS.
+All you need to do is:</p>
+<ol class="arabic">
+<li><p>list your program in <cite>filesystem.toml</cite></p></li>
+<li>
+<p>create <cite>recipe.sh</cite> in <cite>cookbook/recipes/hello-world</cite>:</p>
+<pre class="literal-block">$ mkdir cookbook/recipes/hello-world
+$ echo "GIT=https://github.com/povilasb/redox-hello-world" &gt; cookbook/recipes/hello-world/recipe.sh</pre>
+</li>
+<li>
+<p>build redox:</p>
+<pre class="literal-block">$ make
+$ make qemu</pre>
+</li>
+</ol>
+<p>The problem with this approach is that every time I make a change to my program
+I have to recompile the whole OS and restart qemu.
+It takes time!</p>
+<p>I cannot compile rust programs inside Redox yet. Although the progress is
+there: <a class="reference external" href="https://www.reddit.com/r/Redox/comments/6h4qm9/rustc/">https://www.reddit.com/r/Redox/comments/6h4qm9/rustc/</a>
+Thus what I want is to cross compile my program and ship it to Redox OS.</p>
+<section id="compiling-redox-programs"><h2>Compiling Redox programs</h2>
+<p>Redox build system is based on so called <a class="reference external" href="https://github.com/redox-os/cookbook">cookbook</a>. Which basically is a bunch of
+shell scripts.
+I can use this cookbook to build my programs for Redox.</p>
+<p>Let's say my program source code is located in
+<cite>/home/povilas/projects/redox-hello-world</cite> and Redox in
+<cite>/home/povilas/projects/redox</cite>.
+I have to register my program in cookbook:</p>
+<pre class="literal-block">$ cd ~/projects/redox/cookbook
+$ mkdir recipes/hello-world
+$ echo "GIT=file:///home/povilas/projects/redox-hello-world" &gt; recipes/hello-world/recipe.sh</pre>
+<section id="building-for-the-first-time"><h3>Building for the first time</h3>
+<p>There's a slight difference when I'm building for the first and N-th time.
+In case when the program was never built I have to initiate it inside the
+cookbook:</p>
+<pre class="literal-block">$ cd ~/projects/redox/cookbook
+$ ./repo.sh hello-world</pre>
+<p>This command will fetch the sources from git and build them.</p>
+</section><section id="rebuilding"><h3>Rebuilding</h3>
+<p>When the program was already built, I have to use another script from cookbook:</p>
+<pre class="literal-block">$ cd ~/projects/redox/cookbook
+$ ./cook.sh hello-world build</pre>
+<p>One issue with this approach is that if I don't commit my changes to
+<cite>hello-world</cite> repo, they will not be refetched by <cite>cook.sh</cite>.
+A workaround is to create a symbolic link to <cite>hello-world</cite> program sources
+in cookbook build dir:</p>
+<pre class="literal-block">$ cd ~/projects/redox/cookbook/recipes/hello-world/build
+$ ln -s ~/projects/redox-hello-world/src src</pre>
+<p>Now "<cite>./cook.sh hello-world build</cite>" will always rebuild the changes.</p>
+</section></section><section id="transfer-program-to-redox"><h2>Transfer program to Redox</h2>
+<p>When I develop and experiment, I run Redox inside qemu.
+Currently the easiest way to transfer the built program to Redox is
+to <cite>wget</cite> it from Redox itself.</p>
+<ol class="arabic">
+<li>
+<p>start HTTP server in you host machine:</p>
+<pre class="literal-block">$ cd ~/projects/redox/cookbook/recipes/hello-world/build/target/x86_64-unknown-redox/release
+$ python3 -m http.server</pre>
+</li>
+<li>
+<p>download the built program inside Redox:</p>
+<pre class="literal-block">$ wget http://10.0.2.2:8000/hello_world hello_world
+$ chmod 0755 hello_world
+$ ./hello_world</pre>
+</li>
+</ol>
+<p><cite>10.0.2.2</cite> is the default gateway address in qemu
+(<a class="reference external" href="http://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29">http://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29</a>).
+<cite>8000</cite> is default port for python based HTTP server.</p>
+</section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/builds/" rel="tag">builds</a></li>
+            <li><a class="tag p-category" href="../../categories/redox/" rel="tag">redox</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../ssh-agent-forwarding/" rel="prev" title="SSH Agent Forwarding">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../what-i-have-learned-from-resurrecting-my-operating-system/" rel="next" title="What I have learned from resurrecting my operating system">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

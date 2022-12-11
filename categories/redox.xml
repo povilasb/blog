@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about redox)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/redox.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Compiling programs for RedoxOS</title><link>http://blog.povilasb.com/posts/compiling-programs-for-redoxos/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;This writting is based on
+&lt;a class="reference external" href="https://github.com/redox-os/redox/tree/0eba99659e6ef9d2184e64eaee045c4a720132db"&gt;https://github.com/redox-os/redox/tree/0eba99659e6ef9d2184e64eaee045c4a720132db&lt;/a&gt;
+version.&lt;/p&gt;
+&lt;p&gt;Currently it's quite easy to get your program to be compiled and shipped
+together with Redox OS.
+All you need to do is:&lt;/p&gt;
+&lt;ol class="arabic"&gt;
+&lt;li&gt;&lt;p&gt;list your program in &lt;cite&gt;filesystem.toml&lt;/cite&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;create &lt;cite&gt;recipe.sh&lt;/cite&gt; in &lt;cite&gt;cookbook/recipes/hello-world&lt;/cite&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ mkdir cookbook/recipes/hello-world
+$ echo "GIT=https://github.com/povilasb/redox-hello-world" &amp;gt; cookbook/recipes/hello-world/recipe.sh&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;build redox:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ make
+$ make qemu&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The problem with this approach is that every time I make a change to my program
+I have to recompile the whole OS and restart qemu.
+It takes time!&lt;/p&gt;
+&lt;p&gt;I cannot compile rust programs inside Redox yet. Although the progress is
+there: &lt;a class="reference external" href="https://www.reddit.com/r/Redox/comments/6h4qm9/rustc/"&gt;https://www.reddit.com/r/Redox/comments/6h4qm9/rustc/&lt;/a&gt;
+Thus what I want is to cross compile my program and ship it to Redox OS.&lt;/p&gt;
+&lt;section id="compiling-redox-programs"&gt;
+&lt;h2&gt;Compiling Redox programs&lt;/h2&gt;
+&lt;p&gt;Redox build system is based on so called &lt;a class="reference external" href="https://github.com/redox-os/cookbook"&gt;cookbook&lt;/a&gt;. Which basically is a bunch of
+shell scripts.
+I can use this cookbook to build my programs for Redox.&lt;/p&gt;
+&lt;p&gt;Let's say my program source code is located in
+&lt;cite&gt;/home/povilas/projects/redox-hello-world&lt;/cite&gt; and Redox in
+&lt;cite&gt;/home/povilas/projects/redox&lt;/cite&gt;.
+I have to register my program in cookbook:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd ~/projects/redox/cookbook
+$ mkdir recipes/hello-world
+$ echo "GIT=file:///home/povilas/projects/redox-hello-world" &amp;gt; recipes/hello-world/recipe.sh&lt;/pre&gt;
+&lt;section id="building-for-the-first-time"&gt;
+&lt;h3&gt;Building for the first time&lt;/h3&gt;
+&lt;p&gt;There's a slight difference when I'm building for the first and N-th time.
+In case when the program was never built I have to initiate it inside the
+cookbook:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd ~/projects/redox/cookbook
+$ ./repo.sh hello-world&lt;/pre&gt;
+&lt;p&gt;This command will fetch the sources from git and build them.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="rebuilding"&gt;
+&lt;h3&gt;Rebuilding&lt;/h3&gt;
+&lt;p&gt;When the program was already built, I have to use another script from cookbook:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd ~/projects/redox/cookbook
+$ ./cook.sh hello-world build&lt;/pre&gt;
+&lt;p&gt;One issue with this approach is that if I don't commit my changes to
+&lt;cite&gt;hello-world&lt;/cite&gt; repo, they will not be refetched by &lt;cite&gt;cook.sh&lt;/cite&gt;.
+A workaround is to create a symbolic link to &lt;cite&gt;hello-world&lt;/cite&gt; program sources
+in cookbook build dir:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd ~/projects/redox/cookbook/recipes/hello-world/build
+$ ln -s ~/projects/redox-hello-world/src src&lt;/pre&gt;
+&lt;p&gt;Now "&lt;cite&gt;./cook.sh hello-world build&lt;/cite&gt;" will always rebuild the changes.&lt;/p&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="transfer-program-to-redox"&gt;
+&lt;h2&gt;Transfer program to Redox&lt;/h2&gt;
+&lt;p&gt;When I develop and experiment, I run Redox inside qemu.
+Currently the easiest way to transfer the built program to Redox is
+to &lt;cite&gt;wget&lt;/cite&gt; it from Redox itself.&lt;/p&gt;
+&lt;ol class="arabic"&gt;
+&lt;li&gt;&lt;p&gt;start HTTP server in you host machine:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ cd ~/projects/redox/cookbook/recipes/hello-world/build/target/x86_64-unknown-redox/release
+$ python3 -m http.server&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;download the built program inside Redox:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;$ wget http://10.0.2.2:8000/hello_world hello_world
+$ chmod 0755 hello_world
+$ ./hello_world&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;cite&gt;10.0.2.2&lt;/cite&gt; is the default gateway address in qemu
+(&lt;a class="reference external" href="http://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29"&gt;http://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29&lt;/a&gt;).
+&lt;cite&gt;8000&lt;/cite&gt; is default port for python based HTTP server.&lt;/p&gt;
+&lt;/section&gt;</description><category>builds</category><category>redox</category><guid>http://blog.povilasb.com/posts/compiling-programs-for-redoxos/</guid><pubDate>Wed, 14 Jun 2017 05:10:28 GMT</pubDate></item></channel></rss>

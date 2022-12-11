@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using libc++ for OS kernel development | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../what-i-have-learned-from-resurrecting-my-operating-system/" title="What I have learned from resurrecting my operating system" type="text/html">
+<link rel="next" href="../notes-on-utf-8/" title="Notes on UTF-8" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Using libc++ for OS kernel development">
+<meta property="og:url" content="http://blog.povilasb.com/posts/using-libc%2B%2B-for-os-kernel-development/">
+<meta property="og:description" content="Lately I started porting my hobby OS
+to C++.
+So far I've used C style error handling: function return value is interpreted
+as error code on failure. Unfortunately this is very inconvenient.
+One always">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-07-11T12:38:11+03:00">
+<meta property="article:tag" content="c++">
+<meta property="article:tag" content="libc++">
+<meta property="article:tag" content="osdev">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="../using-libc%2B%2B-for-os-kernel-development/index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="../using-libc%2B%2B-for-os-kernel-development/" class="u-url">Using libc++ for OS kernel development</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="../using-libc%2B%2B-for-os-kernel-development/" rel="bookmark">
+            <time class="published dt-published" datetime="2017-07-11T12:38:11+03:00" itemprop="datePublished" title="2017-07-11 12:38">2017-07-11 12:38</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="../using-libc%2B%2B-for-os-kernel-development/index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Lately I started porting <a class="reference external" href="https://github.com/povilasb/simple-os">my hobby OS</a>
+to C++.
+So far I've used C style error handling: function return value is interpreted
+as error code on failure. Unfortunately this is very inconvenient.
+One always has to look up the function documentation to figure out what
+values mean errors, etc. I think C++ exceptions are a superior mechanism.
+Unfortunately it's not so easy to get them working in kernel environment:
+<a class="reference external" href="http://wiki.osdev.org/C%2B%2B_Exception_Support">http://wiki.osdev.org/C%2B%2B_Exception_Support</a>.</p>
+<p>Lately I have been learning Rust language. And it's error handling looks
+consistent and quite easy to use. One of the core classes is <a class="reference external" href="https://doc.rust-lang.org/std/result/">Result</a>. Basically it's a simple enum
+which holds heterogeneous values: one for return value on success, other for
+error values.
+Sounds like something like this could be easily implemented in C++ too.
+A quick google search revealed already existing library:
+<a class="reference external" href="https://github.com/oktal/result">https://github.com/oktal/result</a>.</p>
+<p><cite>oktal/result</cite> is a single file header only library. Thus it seemed like it
+would be easy to integrate into my kernel.
+The tricky thing is that it depends on couple of standard libraries:</p>
+<div class="code"><pre class="code cpp"><a id="rest_code_feb7cc8acb1b458db0080650b517011f-1" name="rest_code_feb7cc8acb1b458db0080650b517011f-1" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-1"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span><span class="cp"></span>
+<a id="rest_code_feb7cc8acb1b458db0080650b517011f-2" name="rest_code_feb7cc8acb1b458db0080650b517011f-2" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-2"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;functional&gt;</span><span class="cp"></span>
+<a id="rest_code_feb7cc8acb1b458db0080650b517011f-3" name="rest_code_feb7cc8acb1b458db0080650b517011f-3" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_feb7cc8acb1b458db0080650b517011f-3"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;type_traits&gt;</span><span class="cp"></span>
+</pre></div>
+<p>So I thought why not porting the necessary libraries from libc++.</p>
+<section id="libc"><h2>libc++</h2>
+<p><a class="reference external" href="https://libcxx.llvm.org/">libc++</a> is the implementation of C++ standard
+library. Usually it is used together with clang compiler.
+You can get latest libc++ sources from <a class="reference external" href="https://github.com/llvm-mirror/libcxx">https://github.com/llvm-mirror/libcxx</a>.
+So I thought I'll just copy/paste 2 libraries (<cite>functional</cite> and <cite>type_traits</cite>)
+to my own project and I'll remove the <cite>iostream</cite> use, because it depends
+on I/O functions which currently are too different in my kernel...
+Turns out it's not so easy. <cite>result.h</cite> includes graph roughly looks like this:</p>
+<pre class="literal-block">                       result.h
+                        |     |
+                        |     +-------+
+                        V             V
+                   functional    type_traits
+                    |   | |        |     |
+  +-----+---+---+---+   | +---+    |     |
+  V     |   |   |       V     V    V     V
+tuple   |   |   |  typeinfo  __config   cstddef --+
+        V   |   V                        |        |
+  exception | memory                     V        V
+            V                       __nullptr   stddef.h
+         utility</pre>
+<p>Porting <cite>type_traits</cite> was easy. I've just copied <cite>__nullptr</cite>, <cite>cstddef</cite> and
+<cite>__config</cite> from libc++ and made small hacks in <cite>__config</cite>.
+I took <cite>stddef.h</cite> from GNU libc. Then <cite>type_traits</cite> just worked.</p>
+<p>But I faced more issues, when I started investigating <cite>functional</cite>
+library. The problem is that it depends on exceptions which are disabled
+in my kernel environment.
+From this point it seemed just too much work to continue.</p>
+</section><section id="system-predefined-macros"><h2>System predefined macros</h2>
+<p><cite>__config</cite> in libc++ has such code:</p>
+<div class="code"><pre class="code cpp"><a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-1" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-1" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-1"></a><span class="c1">// Need to detect which libc we're using if we're on Linux.</span>
+<a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-2" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-2" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-2"></a><span class="cp">#if defined(__linux__)</span>
+<a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-3" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-3" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-3"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;features.h&gt;</span><span class="cp"></span>
+<a id="rest_code_b9414b8dc50f4027a78e62c6f63e609d-4" name="rest_code_b9414b8dc50f4027a78e62c6f63e609d-4" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_b9414b8dc50f4027a78e62c6f63e609d-4"></a><span class="cp">#endif </span><span class="c1">// defined(__linux__)</span>
+</pre></div>
+<p><cite>__linux__</cite> is a predefined compiler macro which in this case enables
+<cite>features.h</cite> include, if you're compiling a Linux program.
+Although, my OS kernel code is not meant to be run on Linux, g++ and clang
+still have this macro defined if I'm compiling on Linux.
+I can test predefined macros like this:</p>
+<pre class="literal-block">$ touch dummy.hh
+$ g++ -dM -E dummy.hh
+#define __unix__ 1
+#define __cpp_binary_literals 201304
+#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+#define __x86_64 1
+#define __linux 1
+#define __unix 1
+#define __UINT32_MAX__ 0xffffffffU
+#define __linux__ 1
+...</pre>
+<p>Obviously this macro causes me problems: I don't have <cite>features.h</cite> for my
+system. Thus I want to undefine <cite>__linux__</cite>, <cite>__linux</cite>, etc.</p>
+<section id="undefining-macros"><h3>Undefining macros</h3>
+<p>I think superior method to solve macro issues is to create a cross
+compiler. E.g. Redox OS has taken this path with it's <a class="reference external" href="https://github.com/redox-os/gcc/commit/37820fd5d9a7c9037a4a1be0816610cbd00ae59d#diff-dbff4af31a2e5a58eeb80832dead0b95R19">gcc port</a>:</p>
+<div class="code"><pre class="code cpp"><a id="rest_code_d84a7b536cf146ee98778c05d49ec249-1" name="rest_code_d84a7b536cf146ee98778c05d49ec249-1" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-1"></a><span class="cp">#define TARGET_OS_CPP_BUILTINS()      \</span>
+<a id="rest_code_d84a7b536cf146ee98778c05d49ec249-2" name="rest_code_d84a7b536cf146ee98778c05d49ec249-2" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-2"></a><span class="cp">   do {                                \</span>
+<a id="rest_code_d84a7b536cf146ee98778c05d49ec249-3" name="rest_code_d84a7b536cf146ee98778c05d49ec249-3" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-3"></a><span class="cp">     builtin_define ("__redox__");      \</span>
+<a id="rest_code_d84a7b536cf146ee98778c05d49ec249-4" name="rest_code_d84a7b536cf146ee98778c05d49ec249-4" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-4"></a><span class="cp">     builtin_define ("__unix__");      \</span>
+<a id="rest_code_d84a7b536cf146ee98778c05d49ec249-5" name="rest_code_d84a7b536cf146ee98778c05d49ec249-5" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-5"></a><span class="cp">     builtin_assert ("system=redox");   \</span>
+<a id="rest_code_d84a7b536cf146ee98778c05d49ec249-6" name="rest_code_d84a7b536cf146ee98778c05d49ec249-6" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-6"></a><span class="cp">     builtin_assert ("system=unix");   \</span>
+<a id="rest_code_d84a7b536cf146ee98778c05d49ec249-7" name="rest_code_d84a7b536cf146ee98778c05d49ec249-7" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-7"></a><span class="cp">     builtin_assert ("system=posix");   \</span>
+<a id="rest_code_d84a7b536cf146ee98778c05d49ec249-8" name="rest_code_d84a7b536cf146ee98778c05d49ec249-8" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_d84a7b536cf146ee98778c05d49ec249-8"></a><span class="cp">   } while(0);</span>
+</pre></div>
+<p>Unfortunately, cross compiler is too much work for my project.</p>
+<p>The other way to workaround macro issues is to use <cite>#undef</cite> directive:</p>
+<div class="code"><pre class="code cpp"><a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-1"></a><span class="cp">#undef __linux__</span>
+<a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-2"></a><span class="cp">#if defined(__linux__)</span>
+<a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-3"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;features.h&gt;</span><span class="cp"></span>
+<a id="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4" name="rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4" href="../using-libc%2B%2B-for-os-kernel-development/#rest_code_5d4e7d448ca942149c5c33c1b1a6b038-4"></a><span class="cp">#endif </span><span class="c1">// defined(__linux__)</span>
+</pre></div>
+<p>This was the change I made to <cite>__config</cite>.</p>
+</section></section><section id="conclusions"><h2>Conclusions</h2>
+<p>Using C++ standard library in kernel environment would definitely save me a
+lot of work. Unfortunately, it relies on exceptions and RTTI support.
+Thus porting libc++ to current kernel environment is just too much work.
+The other approach could be to reimplement standard library that does not use
+exceptions.</p>
+<p>P.S. <a class="reference external" href="https://github.com/electronicarts/EASTL">https://github.com/electronicarts/EASTL</a> is STL implementation from
+Electronic Arts. It provides the ability to disable exceptions.
+Unfortunately, in such case no alternative error handling is provided.</p>
+</section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/c%2B%2B/" rel="tag">c++</a></li>
+            <li><a class="tag p-category" href="../../categories/libc%2B%2B/" rel="tag">libc++</a></li>
+            <li><a class="tag p-category" href="../../categories/osdev/" rel="tag">osdev</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../what-i-have-learned-from-resurrecting-my-operating-system/" rel="prev" title="What I have learned from resurrecting my operating system">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../notes-on-utf-8/" rel="next" title="Notes on UTF-8">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>

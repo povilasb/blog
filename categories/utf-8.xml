@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="../assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Povilas Blog (Posts about utf-8)</title><link>http://blog.povilasb.com/</link><description></description><atom:link href="http://blog.povilasb.com/categories/utf-8.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><lastBuildDate>Sun, 11 Dec 2022 18:28:53 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>Notes on UTF-8</title><link>http://blog.povilasb.com/posts/notes-on-utf-8/</link><dc:creator>Povilas Balciunas</dc:creator><description>&lt;p&gt;UTF-8 is the most popular, to my mind, character encoding invented by
+Ken Thomson (co-inventor of Unix and Go language) and Rob Pike (co-inventor
+of Go language).
+If you use Rust and Python, strings are encoded in UTF-8 by default.
+Anyway, I got interested in &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm"&gt;Boyer-Moore string search algorithm&lt;/a&gt;.
+And of course I wanted to implement it for UTF-8 which is most practical.
+Before I could do that effectively, I had to understand UTF-8 internals.&lt;/p&gt;
+&lt;section id="description"&gt;
+&lt;h2&gt;Description&lt;/h2&gt;
+&lt;p&gt;UTF-8 is pretty well described in &lt;a class="reference external" href="https://tools.ietf.org/html/rfc3629"&gt;RFC 3629&lt;/a&gt;.
+UTF-8 character size varies between 1-4 bytes. The exact size depends
+on a character, but personally I think that more common characters are encoded
+with less bytes. E.g. ASCII symbols are encoded with 1 byte, cyrillic,
+Lithuanian - 2 bytes, Japanese - 3, etc.&lt;/p&gt;
+&lt;p&gt;The maximum size of UTF-8 character code is 21 bits. Other 11 bits are
+used as metadata. This table sums up the encoding format:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;Char. number range  |        UTF-8 octet sequence
+   (hexadecimal)    |              (binary)
+--------------------+---------------------------------------------
+0000 0000-0000 007F | 0xxxxxxx
+0000 0080-0000 07FF | 110xxxxx 10xxxxxx
+0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx
+0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx&lt;/pre&gt;
+&lt;p&gt;where &lt;cite&gt;x&lt;/cite&gt; are bits used to encode character code.&lt;/p&gt;
+&lt;/section&gt;
+&lt;section id="example"&gt;
+&lt;h2&gt;Example&lt;/h2&gt;
+&lt;p&gt;Let's take character &lt;cite&gt;č&lt;/cite&gt; and encode it to UTF-8. It's encoded with 2 bytes
+&lt;cite&gt;0xC48D&lt;/cite&gt; and the character code is &lt;cite&gt;0x10D&lt;/cite&gt;.
+We can test this with Rust:&lt;/p&gt;
+&lt;div class="code"&gt;&lt;pre class="code rust"&gt;&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-1" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-1" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-1"&gt;&lt;/a&gt;&lt;span class="kd"&gt;let&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;chars&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="fm"&gt;vec!&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mh"&gt;0xC4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;0x8D&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-2" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-2" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-2"&gt;&lt;/a&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;in&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;String&lt;/span&gt;::&lt;span class="n"&gt;from_utf8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;chars&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="n"&gt;unwrap&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="n"&gt;chars&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-3" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-3" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-3"&gt;&lt;/a&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="fm"&gt;println!&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"{} 0x{:X}"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;as&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;u32&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;a id="rest_code_b2f928940fa6465c9150892f5ce3f2f4-4" name="rest_code_b2f928940fa6465c9150892f5ce3f2f4-4" href="http://blog.povilasb.com/posts/notes-on-utf-8/#rest_code_b2f928940fa6465c9150892f5ce3f2f4-4"&gt;&lt;/a&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The output is:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;č 0x10D&lt;/pre&gt;
+&lt;/section&gt;
+&lt;section id="string-operations"&gt;
+&lt;h2&gt;String operations&lt;/h2&gt;
+&lt;p&gt;UTF-8 strings can be easily concatenated.&lt;/p&gt;
+&lt;p&gt;Character at position &lt;cite&gt;N&lt;/cite&gt; access complexity is &lt;cite&gt;O(N)&lt;/cite&gt;.
+That's why Rust strings don't have index operator &lt;cite&gt;str[]&lt;/cite&gt; because
+usually this operator means &lt;cite&gt;O(1)&lt;/cite&gt; complexity.&lt;/p&gt;
+&lt;p&gt;String search is the same as in ASCII strings. Basically, you can do byte
+to byte search. Thus Boyer-Moore search should also work with UTF-8 strings
+without bigger problems.&lt;/p&gt;
+&lt;p&gt;Iterating UTF-8 strings is a bit more complicated than ASCII. You have
+to calculate how many bytes each character takes up.&lt;/p&gt;
+&lt;/section&gt;</description><category>strings</category><category>utf-8</category><guid>http://blog.povilasb.com/posts/notes-on-utf-8/</guid><pubDate>Wed, 19 Jul 2017 13:22:43 GMT</pubDate></item></channel></rss>

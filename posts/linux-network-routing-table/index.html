@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html prefix="
+og: http://ogp.me/ns# article: http://ogp.me/ns/article#
+" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linux network routing table | Povilas Blog</title>
+<link href="../../assets/css/all-nocdn.css" rel="stylesheet" type="text/css">
+<meta name="theme-color" content="#5670d4">
+<meta name="generator" content="Nikola (getnikola.com)">
+<link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="../../rss.xml">
+<link rel="canonical" href="http://blog.povilasb.com/posts/linux-network-routing-table/">
+<!--[if lt IE 9]><script src="../../assets/js/html5.js"></script><![endif]--><meta name="author" content="Povilas Balciunas">
+<link rel="prev" href="../linux-virtual-network-devices/" title="Linux virtual network devices" type="text/html">
+<link rel="next" href="../data-tunelling-over-dns/" title="Data tunelling over DNS" type="text/html">
+<meta property="og:site_name" content="Povilas Blog">
+<meta property="og:title" content="Linux network routing table">
+<meta property="og:url" content="http://blog.povilasb.com/posts/linux-network-routing-table/">
+<meta property="og:description" content="Our computers can have multiple network devices: Ethernet, WiFi cards,
+virtual network devices, etc.
+On Linux when the network packets arrive to one of these devices, these
+packets are handled by devi">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-08-28T16:35:53+03:00">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="networking">
+</head>
+<body>
+<a href="#content" class="sr-only sr-only-focusable">Skip to main content</a>
+
+<!-- Menubar -->
+
+<nav class="navbar navbar-expand-md static-top mb-4
+navbar-dark
+bg-dark
+"><div class="container">
+<!-- This keeps the margins nice -->
+        <a class="navbar-brand" href="../../">
+
+            <span id="blog-title">Povilas Blog</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="bs-navbar">
+            <ul class="navbar-nav mr-auto">
+<li class="nav-item">
+<a href="../../archive.html" class="nav-link">Archive</a>
+                </li>
+<li class="nav-item">
+<a href="../../categories/" class="nav-link">Tags</a>
+                </li>
+<li class="nav-item">
+<a href="../../rss.xml" class="nav-link">RSS feed</a>
+
+                
+            </li>
+</ul>
+<ul class="navbar-nav navbar-right">
+<li class="nav-item">
+    <a href="index.rst" id="sourcelink" class="nav-link">Source</a>
+    </li>
+
+                
+            </ul>
+</div>
+<!-- /.navbar-collapse -->
+    </div>
+<!-- /.container -->
+</nav><!-- End of Menubar --><div class="container" id="content" role="main">
+    <div class="body-content">
+        <!--Body content-->
+        
+<article class="post-text h-entry hentry postpage" itemscope="itemscope" itemtype="http://schema.org/Article"><header><h1 class="p-name entry-title" itemprop="headline name"><a href="." class="u-url">Linux network routing table</a></h1>
+
+        <div class="metadata">
+            <p class="byline author vcard p-author h-card"><span class="byline-name fn p-name" itemprop="author">
+                    Povilas Balciunas
+            </span></p>
+            <p class="dateline">
+            <a href="." rel="bookmark">
+            <time class="published dt-published" datetime="2017-08-28T16:35:53+03:00" itemprop="datePublished" title="2017-08-28 16:35">2017-08-28 16:35</time></a>
+            </p>
+                <p class="commentline">    
+
+                    </p>
+<p class="sourceline"><a href="index.rst" class="sourcelink">Source</a></p>
+
+        </div>
+        
+    </header><div class="e-content entry-content" itemprop="articleBody text">
+    <p>Our computers can have multiple network devices: Ethernet, WiFi cards,
+virtual network devices, etc.
+On Linux when the network packets arrive to one of these devices, these
+packets are handled by device drivers and then put to networking stack.
+Then packets are dispatched to appropriate application to handle.</p>
+<p>When the packets are sent, they are put to networking stack, e.g. via
+BSD sockets API.
+Then Linux networking stack uses a routing table to decide which network
+interface the packet will be sent to.</p>
+<p>Routing table can be viewed with:</p>
+<pre class="literal-block">$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG    600    0        0 wlp3s0
+0.0.0.0         0.0.0.0         0.0.0.0         U     1002   0        0 enp0s25
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 tun0
+192.168.1.0     0.0.0.0         255.255.255.0   U     600    0        0 wlp3s0</pre>
+<p>or</p>
+<pre class="literal-block">$ ip route show
+default via 192.168.1.1 dev wlp3s0 proto static metric 600
+default dev enp0s25 scope link metric 1002 linkdown
+10.0.0.0/24 dev tun0 proto kernel scope link src 10.0.0.1
+192.168.1.0/24 dev wlp3s0 proto kernel scope link src 192.168.1.125 metric 600</pre>
+<p>Although <cite>route</cite> command is deprecated <a class="footnote-reference brackets" href="#f1" id="footnote-reference-1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>, I still prefer it because of
+nicer output.</p>
+<section id="example"><h2>Example</h2>
+<p>Let's take the output of <cite>route -n</cite>.
+Now what happens when we execute <cite>ping 8.8.8.8</cite>?</p>
+<p>Well, Linux kernel</p>
+<ol class="arabic simple">
+<li><p>matches address <cite>8.8.8.8</cite> with <cite>0.0.0.0</cite> (all addresses),</p></li>
+<li><p>selects route with the lowest <cite>Metric</cite> (600) because there are multiple
+routes to <cite>0.0.0.0</cite>,</p></li>
+<li><p>looks up the gateway which is <cite>192.168.1.1</cite>,</p></li>
+<li><p>matches gateway address with <cite>192.168.1.0</cite>,</p></li>
+<li><p>looks up that destination <cite>192.168.1.0</cite> does not have gateway meaning
+that the network is directly connected somehow,</p></li>
+<li><p>does NAT (network address translation),</p></li>
+<li><p>writes packet to <cite>wlp3s0</cite> interface,</p></li>
+<li><p>device driver sends packet to WiFi card.</p></li>
+</ol></section><section id="understanding-routing-table"><h2>Understanding routing table</h2>
+<p>Again, let's look at <cite>route -n</cite> output.</p>
+<p><cite>Genmask</cite> column is a mask applied (bitwise AND) to IP packet destination
+address.
+After <cite>Genmask</cite> is applied, <cite>Destination</cite> column is used to match packet
+destination.
+If the matched destination has <cite>Gateway</cite>, packet is forwarded there,
+otherwise it's written to network interface described by column <cite>Iface</cite>.</p>
+<p>When packet destination address matches with multiple <cite>Destination</cite> entries,
+the one with the longest prefix wins.
+For example address <cite>192.168.1.100</cite> matches <cite>0.0.0.0/0</cite> and <cite>192.168.1.0/24</cite>.
+But <cite>192.168.1.0</cite> prefix is 24 bits long, so this rule takes priority.</p>
+<p><cite>Flags</cite> column holds some metainfo about routes: <cite>U</cite> - route is up, <cite>G</cite> route
+has gateway.</p>
+<p><cite>Metric</cite> column is used to determine priority when multiple routes match
+packet destination address.</p>
+<p><cite>Ref</cite> column is not used in Linux kernel.</p>
+</section><section id="manipulating-routing-table"><h2>Manipulating routing table</h2>
+<p>We can use <cite>ip</cite> command to add, delete, modify routes.
+E.g. we can redirect packets to desired network interfaces:</p>
+<pre class="literal-block"># ip route add 8.8.8.8 via 10.0.0.2</pre>
+<p>This makes all packets with destination <cite>8.8.8.8</cite> be written to
+<a class="reference external" href="../linux-virtual-network-devices/">tun0 interface</a>.</p>
+<p>To delete route issue command:</p>
+<pre class="literal-block"># ip route del 8.8.8.8 via 10.0.0.2</pre>
+<p>We can test which <cite>Destination</cite> entry will be matched for given address:</p>
+<pre class="literal-block">$ ip route get 10.0.0.2
+10.0.0.2 dev tun0 src 10.0.0.1
+
+$ ip route get 8.8.8.8
+8.8.8.8 via 192.168.1.1 dev wlp3s0 src 192.168.1.125
+
+$ ip route get 192.168.1.100
+192.168.1.100 dev wlp3s0 src 192.168.1.125</pre>
+<p>The difference between the last two routes is that NAT will be executed
+for packets destined to <cite>8.8.8.8</cite>, while packets with destination
+<cite>192.168.1.100</cite> will remain intact.</p>
+<p>We can change the route metric by adding new route with different metric
+and then deleting the old one:</p>
+<pre class="literal-block"># ip route add default via 192.168.1.1 dev wlp3s0 proto static metric 500
+# ip route del default via 192.168.1.1 dev wlp3s0 proto static metric 600</pre>
+<p class="rubric">References</p>
+<aside class="footnote-list brackets"><aside class="footnote brackets" id="f1" role="note"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#footnote-reference-1">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://xmodulo.com/linux-tcpip-networking-net-tools-iproute2.html">http://xmodulo.com/linux-tcpip-networking-net-tools-iproute2.html</a></p>
+</aside><aside class="footnote brackets" id="f2" role="note"><span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://www.cyberciti.biz/faq/what-is-a-routing-table/">https://www.cyberciti.biz/faq/what-is-a-routing-table/</a></p>
+</aside></aside></section>
+</div>
+    <aside class="postpromonav"><nav><ul itemprop="keywords" class="tags">
+<li><a class="tag p-category" href="../../categories/linux/" rel="tag">linux</a></li>
+            <li><a class="tag p-category" href="../../categories/networking/" rel="tag">networking</a></li>
+        </ul>
+<ul class="pager hidden-print">
+<li class="previous">
+                <a href="../linux-virtual-network-devices/" rel="prev" title="Linux virtual network devices">Previous post</a>
+            </li>
+            <li class="next">
+                <a href="../data-tunelling-over-dns/" rel="next" title="Data tunelling over DNS">Next post</a>
+            </li>
+        </ul></nav></aside><section class="comments hidden-print"><h2>Comments</h2>
+            
+
+        </section></article><!--End of body content--><footer id="footer">
+            Contents © 2022         <a href="mailto:balciunas90@gmail.com">Povilas Balciunas</a> - Powered by         <a href="https://getnikola.com" rel="nofollow">Nikola</a>         
+            
+        </footer>
+</div>
+</div>
+
+        <script src="../../assets/js/all-nocdn.js"></script><script>
+    baguetteBox.run('div#content', {
+        ignoreClass: 'islink',
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
+    </script>
+</body>
+</html>
