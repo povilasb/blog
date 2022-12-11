@@ -1,4 +1,4 @@
-aiohttp==3.6.2
+aiohttp==3.7.4
 Nikola==8.0.4
 Jinja2==2.11.3
 watchdog==0.8.3
