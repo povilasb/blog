@@ -2,9 +2,8 @@ This folder contains the source used to generate a static site using Nikola.
 
 Installation and documentation at https://getnikola.com/:
 ```bash
-python3 -m venv pyenv
-source pyenv/bin/activate
-pip3 install -r requirements.txt
+poetry install
+poetry shell
 nikola theme -i bootstrap3-jinja  # my theme is based on this one
 ```
 

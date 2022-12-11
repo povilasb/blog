@@ -1,5 +1,0 @@
-aiohttp==3.6.2
-Nikola==8.0.4
-Jinja2==2.11.3
-watchdog==0.8.3
-ws4py==0.4.2
